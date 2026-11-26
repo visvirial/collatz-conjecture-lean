@@ -15,6 +15,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Residue.lean` | Verified symbolic descent certificates for residue classes mod `2^k` |
 | `Collatz/Verify.lean` | Kernel-checked descent of every `2 ≤ n < 1024` |
 | `Collatz/Main.lean` | Main reduction theorem |
+| `Collatz/Cycle.lean` | Constraints on nontrivial cycles |
 
 ## Main result
 
@@ -26,6 +27,20 @@ theorem survivors_ten_length : (survivors 10).length = 64
 
 So the conjecture reduces to 64 of the 1024 residue classes mod `2^10` (6.25%).
 The survivor counts for `k = 0..16` match OEIS A076227.
+
+## Cycle constraints
+
+For a cycle with `a` even steps and `b` odd steps (orbit `xᵢ`):
+
+```lean
+theorem cycle_identity : 2 ^ a * ∏_{odd i} xᵢ = ∏_{odd i} (3 * xᵢ + 1)
+theorem three_pow_lt_two_pow : 3 ^ b < 2 ^ a
+theorem two_pow_le (hm : ∀ odd i, m ≤ xᵢ) : m ^ b * 2 ^ a ≤ (3 * m + 1) ^ b
+```
+
+Combined with the verification of all `n < 1024`, any cycle not containing `1` has
+at least 41 odd steps, at least 65 even steps, and length at least 106
+(`odds_card_ge`, `evens_card_ge`, `cycle_length_ge`).
 
 ## Build
 
