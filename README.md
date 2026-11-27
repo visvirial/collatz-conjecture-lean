@@ -38,6 +38,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/LongStop.lean` | Infinitely many `n` need `≥ 3.94 log n - c` steps to reach `1` |
 | `Collatz/CLT.lean` | Central limit theorem for the parities on `ℤ_[2]` |
 | `Collatz/Mixing.lean` | `T` on `ℤ_[2]` is exact and strongly mixing |
+| `Collatz/Equidist.lean` | Almost every 2-adic orbit is equidistributed mod `2^k` for all `k` |
 | `Collatz/Bernstein.lean` | Conjecture ⟺ `3 Q(n)` is an integer for every `n ≥ 1` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
@@ -184,6 +185,15 @@ theorem oddCount2_clt (hZ : HasLaw Z (gaussianReal 0 (1 / 4)) P') :
 theorem T_exact (hS : ∀ n, ∃ E, MeasurableSet E ∧ S = T^[n] ⁻¹' E) : μ S = 0 ∨ μ S = 1
 theorem T_mixing (hA : MeasurableSet A) (hB : MeasurableSet B) :
     Tendsto (fun n => μ (A ∩ T^[n] ⁻¹' B)) atTop (𝓝 (μ A * μ B))
+```
+
+`Collatz/Equidist.lean` proves the second half of Lagarias' Theorem K by a block strong law
+(windows of `k` parities at positions `j (k+1) + c` are independent): almost every orbit visits
+every residue class mod `2^k` with frequency `2^-k`:
+
+```lean
+theorem orbit_equidistributed_mod : ∀ᵐ x ∂μ, ∀ k d : ℕ, d < 2 ^ k →
+    Tendsto (fun n => #{i < n | (T^[i] x).appr k = d} / n) atTop (𝓝 (2 ^ k)⁻¹)
 ```
 
 `Collatz/Bernstein.lean` gives Bernstein's (1994) non-iterative 2-adic form of the conjecture:
