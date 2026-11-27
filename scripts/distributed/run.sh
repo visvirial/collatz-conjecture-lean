@@ -1,15 +1,17 @@
 #!/bin/bash
 # run.sh WORKDIR HOST:N [HOST:N ...]
-# Compile every chunk module CollatzBig/{Res,Cyc}*.lean in parallel, e.g.
+# Compile every chunk module CollatzBig/{Res,Cyc,Cst,Ext,ExtCyc}*.lean in parallel, e.g.
 #   scripts/distributed/run.sh /tmp/big local:8 buildhost:24
-# Remote hosts need a copy of the project (rsync without .lake) with `lake build Collatz.Defs`.
-# Afterwards copy the remote CollatzBig/*.olean back and run scripts/assemble_big.sh.
+# Remote hosts need a copy of the project (rsync without .lake) with
+# `lake build Collatz.Defs Collatz.ExtDefs Collatz.CoeffStopDefs`.
+# Afterwards copy the remote CollatzBig/*.olean back and run scripts/assemble_big.sh and
+# scripts/assemble_ext.sh.
 set -e
 W=$1; shift
 D=$(cd "$(dirname "$0")" && pwd)
 PROJ=${PROJ:-$(cd "$D/../.." && pwd)}
 mkdir -p "$W/out" "$PROJ/.lake/build/lib/lean/CollatzBig"; : > "$W/log"; touch "$W/queue.lock"
-(cd "$PROJ/CollatzBig" && ls Res*.lean Cyc*.lean | sed 's/\.lean$//') > "$W/queue"
+(cd "$PROJ/CollatzBig" && ls | grep -E "^(Res|Cyc|Cst|Ext[0-9]|ExtCyc)[0-9A-Za-z]*\\.lean$" | sed 's/\.lean$//') > "$W/queue"
 echo "$(wc -l < "$W/queue") jobs"
 id=0
 for spec in "$@"; do

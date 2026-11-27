@@ -3,7 +3,7 @@ import Collatz.LLN
 /-!
 # Equidistribution of 2-adic 3x+1 orbits
 
-The second half of Lagarias' Theorem K: for Haar-almost every `x ∈ ℤ₂`, the `T`-orbit of `x`
+The second half of Lagarias' Theorem K (due to Matthews–Watts 1984): for Haar-almost every `x ∈ ℤ₂`, the `T`-orbit of `x`
 is equidistributed modulo `2^k` for every `k`. That is, for every ball `B = closedBall a (2^-k)`
 the fraction of `i < n` with `T^i x ∈ B` tends to `2^-k` (`orbit_equidistributed`).
 

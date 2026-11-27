@@ -5,7 +5,8 @@ A Lean 4 + Mathlib formalization of partial results on the Collatz (3x+1) conjec
 **The conjecture itself is not proved.** `Collatz.Conjecture` is stated as a `Prop`. The library
 proves reductions, density theorems, cycle constraints, kernel-checked verifications and the
 2-adic theory of the map. There is no `sorry`, no `native_decide`, and every declaration depends
-only on the standard axioms `propext`, `Classical.choice` and `Quot.sound` (checked by `lake test`).
+only on the standard axioms `propext`, `Classical.choice` and `Quot.sound` (checked by `lake test`
+for the `Collatz` library and by `#guard_msgs` audits for `CollatzBig`).
 
 Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` or `(3n+1)/2`;
 `s_j(n)` (`oddCount j n`) is the number of odd values among `n, T n, …, T^(j-1) n`.
@@ -16,41 +17,42 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | --- | --- | --- |
 | Every `2 ≤ n < 7281311744` (`= 434·2^24`) drops below itself, hence reaches 1 | `CollatzBig.Ext.descends_below` | (verification) |
 | A nontrivial cycle has length `≥ 492531` (`≥ 301994` in the accelerated convention) | `CollatzBig.Ext.cycle_length_ge` | cf. Eliahou 1993 |
-| No nontrivial circuit (1-cycle) with fewer than `6586818670` odd steps, without Baker | `CollatzBig.Circuit.no_circuit` | Steiner 1977 (bounded form) |
+| No nontrivial circuit (1-cycle) with fewer than `6586818670` odd steps, without Baker | `CollatzBig.Circuit.no_circuit` | Steiner 1978 (bounded form) |
 | No nontrivial cycle with `≤ 68` odd blocks and fewer than `64497107` odd steps (up to 469 blocks with smaller bounds) | `CollatzBig.MCycle.reachesOne_of_blocks_le_68` | Simons–de Weger 2005 (bounded form) |
-| Conjecture ⟺ descent in 64 of the 1024 classes mod `2^10` | `conjecture_iff_survivors_descend` | Terras, Everett |
+| Conjecture ⟺ descent in 64 of the 1024 classes mod `2^10` | `conjecture_iff_survivors_descend` | cf. Terras 1976 (classes mod `2^k`) |
 | Almost every `n` drops below itself (density 0 of exceptions) | `almost_all_descend`, `density_not_descends` | Terras 1976, Everett 1977 |
 | Exact density of stopping time `≤ k`, exponential tail `≈ 2^(-0.05k)` | `density_stopsBy`, `density_tail_le` | Terras 1976, Lagarias 1985 (Thm D) |
 | Coefficient stopping time conjecture up to level `301993` | `CollatzBig.Ext.stopsBy_iff_goodSet` | Terras 1976 |
 | Almost every `n` gets below `n^c` for every `c > log 3 / log 4` | `korec` | Korec 1994 |
 | At least `κ N^(3/7)` integers `≤ N` reach 1 | `card_reachesOne_ge_three_sevenths` | Crandall 1978, Krasikov 1989 |
 | Infinitely many `n` need `≥ 3.94 log n - c` steps to reach 1 | `long_stopping_log` | Applegate–Lagarias 2003 (method) |
-| `T` on `ℤ₂` is conjugate to the shift by an isometric bijection `Q` | `TwoAdic.Qequiv`, `Qequiv_conj` | Lagarias 1985 |
-| `ℤ₂` has exactly `2^p` points of period dividing `p`, all rational | `TwoAdic.card_periodic`, `periodic_rational` | Lagarias 1985 |
-| `T` preserves Haar measure, is exact, strongly mixing and Bernoulli | `T_measurePreserving`, `T_exact`, `T_mixing`, `paritySeq_measurePreserving` | Matthews–Watts 1984, Lagarias 1985 |
-| Law of large numbers, central limit theorem and equidistribution mod `2^k` for 2-adic orbits | `odd_fraction_ae`, `oddCount2_clt`, `orbit_equidistributed_mod` | Lagarias 1985 (Thm K) |
-| Conjecture ⟺ `3 Q(n) ∈ ℤ` for every `n ≥ 1` | `TwoAdic.conjecture_iff_three_mul_Q` | Bernstein 1994 |
+| `T` on `ℤ₂` is conjugate to the shift by an isometric bijection `Q` | `TwoAdic.Qequiv`, `Qequiv_conj` | Lagarias 1985 (Thm L), Bernstein–Lagarias 1996 |
+| `ℤ₂` has exactly `2^p` points of period dividing `p`, all rational | `TwoAdic.card_periodic`, `periodic_rational` | cf. Lagarias 1985, Bernstein 1994 |
+| `T` preserves Haar measure, is exact, strongly mixing and Bernoulli | `T_measurePreserving`, `T_exact`, `T_mixing`, `paritySeq_measurePreserving` | Matthews–Watts 1984, Lagarias 1985 (Thms K, L), Bernstein–Lagarias 1996 |
+| Law of large numbers, central limit theorem and equidistribution mod `2^k` for 2-adic orbits | `odd_fraction_ae`, `oddCount2_clt`, `orbit_equidistributed_mod` | equidistribution: Matthews–Watts 1984, Lagarias 1985 (Thm K); LLN and CLT follow from the Bernoulli property |
+| Conjecture ⟺ `3 Q(n) ∈ ℤ` for every `n ≥ 1` | `TwoAdic.conjecture_iff_three_mul_Q` | Lagarias 1985 (third form); Bernstein 1994 (via an explicit `Q⁻¹`) |
 
 A longer write-up (methods, engineering notes, references) is in [`docs/overview.md`](docs/overview.md).
 
-The `CollatzBig.*` results rest on 10263 kernel-checked chunk theorems; see
-[`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md) for the clean rebuild from `git archive`.
+The `CollatzBig.*` results rest on 10267 kernel-checked chunk theorems and two certificate modules;
+see [`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md) for the clean rebuild from `git archive`,
+and `.github/workflows/big.yml` for a re-verification of all of them from source on GitHub Actions.
 
 ## Building and checking
 
 ```sh
 lake exe cache get
 lake build      # the Collatz library (CI)
-lake test       # CollatzTest: axiom audit of every Collatz.* declaration, and the headline statements
+lake test       # CollatzTest: axiom audit of every Collatz.* declaration, and the main statements
 ```
 
 `CollatzTest/Axioms.lean` fails the build if any `Collatz.*` declaration uses an axiom other than
-`propext`, `Classical.choice`, `Quot.sound`; `CollatzTest/Statements.lean` restates the headline
-theorems verbatim. Both run in CI.
+`propext`, `Classical.choice`, `Quot.sound`; `CollatzTest/Statements.lean` restates the main
+`Collatz.*` theorems (the `CollatzBig` ones are outside the Lake build). Both run in CI.
 
 The large verifications (`CollatzBig/`) are not a Lake target, because `lake build` would recompile
 every chunk (about 4.5 GB of memory and 40 s each). They are compiled with `lean -o` and assembled
-by scripts; `CollatzBig/Audit.lean`, `ExtAudit.lean` and `CircuitAudit.lean` check their axioms with
+by scripts; `CollatzBig/Audit.lean`, `ExtAudit.lean`, `CircuitAudit.lean` and `MCycleAudit.lean` check their axioms with
 `#guard_msgs`. See [Large verification](#large-verification-collatzbig).
 
 ## Results in detail
@@ -71,20 +73,21 @@ with OEIS A076227 (checked numerically; only `k = 10` is a theorem).
 
 For a cycle with `a` even and `b` odd steps (orbit `xᵢ`), `2^a ∏ xᵢ = ∏ (3xᵢ + 1)` over the odd
 `xᵢ`, so `3^b < 2^a` and `m^b 2^a ≤ (3m+1)^b` when all odd elements are `≥ m`
-(`Collatz/Cycle.lean`). `cycCheck2` (`Collatz/CycleBound.lean`) refutes these with the convergents
-`176251/111202 < log₂ 3 < 301994/190537` and small integers only. With the verification below
-`1024` this gives cycle length `≥ 106`; with `7281311744`, `≥ 492531` (odd `≥ 190537`, even
-`≥ 301994`), which is the ceiling of this method.
+(`Collatz/Cycle.lean`). With the verification below `1024`, a direct exponent check gives cycle
+length `≥ 106` (`noCycleExponents_1024`). `cycCheck2` (`Collatz/CycleBound.lean`) refutes the
+inequalities with the convergents `176251/111202 < log₂ 3 < 301994/190537` and small integers only;
+with `7281311744` it gives length `≥ 492531` (odd `≥ 190537`, even `≥ 301994`), which is the
+ceiling of this method.
 
-An integer periodic point of the 2-adic map with period `p` is a Collatz cycle with exactly `p`
+A positive integer periodic point of the 2-adic map with period `p` that does not reach 1 is a Collatz cycle with exactly `p`
 even steps (`Collatz/NatCycles.lean`: `card_evens_kstepT`), so `p ≥ 65`, and `p ≥ 301994` with the
 large verification.
 
 A circuit (`k` odd steps, then `l` even steps, back to `n`) satisfies
 `2^(k+l) n + 2^k = 3^k n + 3^k`, so `(k+l)/k` approximates `log₂ 3` within `1/(k n ln 2)`. With
 `n ≥ 7281311744` and the adjacent Farey fractions
-`9809721694/6189245291 < log₂ 3 < 630138897/397573379` (certified in the kernel with numerals of
-up to 630 million bits, `CollatzBig/CircuitCert.lean`), every circuit with `k < 6586818670` is the
+`9809721694/6189245291 < log₂ 3 < 630138897/397573379` (from kernel certificates with numerals of
+up to 630 million bits in `CollatzBig/CircuitCert.lean`, combined in `CollatzBig/Circuit.lean`), every circuit with `k < 6586818670` is the
 trivial one (`Collatz/Circuit.lean`, `CollatzBig/Circuit.lean`):
 
 ```lean
@@ -95,7 +98,8 @@ theorem CollatzBig.Circuit.no_circuit {n k l : ℕ} (hc : IsCircuit n k l) (hk :
 More generally (`Collatz/MCycle.lean`, `CollatzBig/MCycle.lean`), a `T`-cycle of length `K` with
 `k` odd steps, `m` odd blocks and all elements `≥ N` satisfies `N^m 2^K ≤ (N+1)^m 3^k` (only block
 starts contribute), so `0 < K ln 2 - k ln 3 ≤ m ln(1 + 1/N)`. One Farey pair per range of `m` then
-excludes all lattice points (`scripts/mcycle_cert.py`, certificates in `CollatzBig/MCycleCert.lean`):
+excludes all lattice points (`scripts/mcycle_cert.py`, certificates in `CollatzBig/MCycleCert.lean`
+and `CircuitCert.lean`):
 
 | odd blocks `m ≤` | 13 | 38 | 63 | 68 | 88 | 469 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -213,7 +217,7 @@ theorem conjecture_iff_three_mul_Q : Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃
 
 Chunk theorems are `kallFrom (resCheck 24 256 1000) lo len = true` and similar, proved by
 `decide +kernel` (the kernel has GMP-accelerated `Nat`). Chunk modules import only the Mathlib-free
-`Collatz.Defs` / `Collatz.ExtDefs`, so they compile independently on several machines. The
+`Collatz.Defs`, `Collatz.ExtDefs` or `Collatz.CoeffStopDefs`, so they compile independently on several machines. The
 extension adds `256 ≤ m < 434` with a sieve over residues mod `2^20`.
 
 ```sh
@@ -222,14 +226,17 @@ python3 scripts/gen_big.py 24 256 1000 6000 8 plan.txt
 gcc -O2 -o plan_ext scripts/plan_ext.c && ./plan_ext 20 4 256 434 1000 > plan_ext.txt
 python3 scripts/gen_ext.py 20 4 256 434 1000 plan_ext.txt CollatzBig
 lake build Collatz
-scripts/distributed/run.sh WORKDIR local:16 otherhost:16      # compile chunks with lean -o
+scripts/distributed/run.sh WORKDIR local:16 otherhost:16      # compile all 10267 chunks with lean -o
 scripts/distributed/watch.sh WORKDIR                          # completion, failures, dead workers, stalls
 scripts/assemble_big.sh                                       # All, Bridge, CoeffStop, Audit
 scripts/assemble_ext.sh                                       # Ext, Circuit, MCycle and their audits
 ```
 
-The last clean rebuild (all 10263 chunks from `git archive`, about 92 CPU-hours on three machines,
-then assembled and audited) is documented in [`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md).
+Remote hosts need a copy of the project with `lake build Collatz.Defs Collatz.ExtDefs Collatz.CoeffStopDefs`.
+The same steps run on GitHub Actions in `.github/workflows/big.yml` (200 parallel jobs).
+The last clean rebuild on our machines (the 10263 `Res`/`Cyc`/`Ext` chunks from `git archive` of two
+commits with byte-identical chunk sources, about 92 hours of compute, then assembled and audited)
+is documented in [`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md).
 
 ## Repository layout
 

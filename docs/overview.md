@@ -16,8 +16,9 @@ reaching 1 (Crandall, Krasikov's exponent `3/7`) and for the length of convergen
 (Applegate–Lagarias' method); and (v) the 2-adic theory of the map: Lagarias' conjugacy as an
 isometric bijection of `ℤ₂`, periodic points, Haar measure preservation, exactness, strong mixing,
 the Bernoulli isomorphism, the strong law, the central limit theorem, equidistribution, and
-Bernstein's non-iterative reformulation. The conjecture itself is not proved. All 1184
-declarations of the library use only the axioms `propext`, `Classical.choice` and `Quot.sound`;
+Lagarias' 2-adic form of the conjecture (`3Q(n) ∈ ℤ`). The conjecture itself is not proved. All
+1184 constants of the `Collatz` library (including auxiliary ones) and all `CollatzBig` headline
+theorems use only the axioms `propext`, `Classical.choice` and `Quot.sound`;
 there is no `sorry` and no `native_decide`.
 
 ## 1. Introduction
@@ -35,13 +36,14 @@ Its distinctive features are:
 - **Kernel-checked computation without `native_decide`.** Large finite checks are written as
   `Nat.rec`/`Bool` functions with soundness proofs and evaluated by `decide +kernel`, which uses
   the kernel's GMP-backed `Nat` arithmetic. Nothing is trusted beyond the Lean kernel.
-- **Mechanical trust checks.** `lake test` collects the axioms of every declaration of the library
-  and fails on anything other than `propext`, `Classical.choice` and `Quot.sound`; a second test
-  file restates the headline theorems verbatim. The large verifications carry their own
+- **Mechanical trust checks.** `lake test` collects the axioms of every declaration of the `Collatz`
+  library and fails on anything other than `propext`, `Classical.choice` and `Quot.sound`; a second
+  test file restates the main `Collatz.*` theorems. The large verifications carry their own
   `#guard_msgs` axiom audits.
-- **Reproducible provenance.** The 10 263 chunk modules of the large verification were rebuilt
-  from `git archive` of a single commit on three machines; hashes, timings and the assembly are
-  recorded in `CollatzBig/PROVENANCE.md`.
+- **Reproducible provenance.** The 10 263 residue and cycle chunks of the large verification were
+  rebuilt from `git archive` (of two commits with byte-identical chunk sources) on our machines;
+  hashes, timings and the assembly are recorded in `CollatzBig/PROVENANCE.md`. A GitHub Actions
+  workflow (`big.yml`) recompiles all 10 267 chunks from source and reruns the assembly and audits.
 - **Baker-free cycle results.** Mathlib has no theory of linear forms in logarithms. We replace
   Baker-type bounds by explicit Farey pairs for `log₂ 3` certified in the kernel, combined with
   the verified range. This yields bounded versions of results that are proved in the literature
@@ -93,13 +95,14 @@ survivors mod `2^24` are checked directly (4235 chunks, 32 million `certAux` ite
 
 Chunk modules import only a Mathlib-free definitions file, so they load quickly and compile
 independently with `lean -o` on several machines (`scripts/distributed/`). Kernel memory grows
-with the work in one declaration (roughly 9 GB per million steps), which fixes the chunk size;
+with the work in one declaration (roughly 9 GB per million steps, as observed in our runs), which fixes the chunk size;
 each chunk takes 30–45 s and about 4.5 GB.
 
 ### 3.3 Provenance
 
-All chunks were recompiled from `git archive` of one commit: 6008 chunks for `2^32` (53.9 CPU
-hours on two machines) and 4255 for the extension (about 38 hours on three machines), all
+The chunks were recompiled from `git archive`: 6008 chunks for `2^32` from commit `8878d4d` (53.9 CPU
+hours on two machines) and 4255 for the extension from commit `49a126a`, whose chunk sources are
+byte-identical (about 38 hours on three machines), all
 successful; infrastructure failures (a missing dependency on one host, two ssh resets) were
 requeued and recorded. The assembly then compiled the combining modules and the axiom audits.
 The source and build-product hashes are in `CollatzBig/PROVENANCE.md`.
@@ -126,7 +129,7 @@ so `0 < (k+l) - k log₂ 3 < 1/(n ln 2)`. If `a/b < log₂ 3 < c/d` are adjacent
 lattice points `s(c,d) - t(a,b)` are excluded by size; the single critical point `(K,k) = (c,d)`
 is excluded because the resulting `n` is not an integer. With `n ≥ 7 281 311 744` and the pair
 `9809721694/6189245291 < log₂ 3 < 630138897/397573379`, every circuit with
-`k < 6 586 818 670` is `1 → 2 → 1` (`CollatzBig.Circuit.no_circuit`). Steiner [1977] excluded all
+`k < 6 586 818 670` is `1 → 2 → 1` (`CollatzBig.Circuit.no_circuit`). Steiner [1978] excluded all
 nontrivial circuits using Baker's theorem.
 
 ### 4.3 Cycles with few odd blocks
@@ -180,14 +183,16 @@ even steps, so `p ≥ 301 994` (`CollatzBig.Ext.kstepT_period_ge`).
 - **Krasikov's exponent 3/7.** With all exponents `2 ≤ a ≤ 30` and constants `C_r` for the
   residues mod 27, induction on `x - m` gives `C_{m mod 27} (x/m)^{3/7} ≤ K · #(backward tree of
   m below x)`. The step needs one inequality per residue mod 81, checked by `decide +kernel` after
-  replacing `(3/2^a)^{3/7}` by rational lower bounds verified through seventh powers. Numerically,
-  constants mod `3^h` give exponents 0.4357, 0.450, 0.460, 0.470 for `h = 3..6`; the
+  replacing `(3/2^a)^{3/7}` by rational lower bounds verified through seventh powers. In exploratory
+  computations (not in the repository), constants mod `3^h` gave exponents of about 0.436, 0.450,
+  0.460, 0.470 for `h = 3..6`; the
   Krasikov–Lagarias exponent 0.84 needs a different, much larger system.
 - **Long trajectories** [Applegate–Lagarias 2003]. A potential `h` on the residues mod 243 with
-  `h(a) + 2 ≤ h(a') + 5·[odd move]` for some backward move from every residue mod 729 gives, for
+  `h(a) + 2 ≤ h(a') + 5·[odd move]` for some backward move from every residue mod 729
+  prime to 3 gives, for
   every `L`, an `n` with total stopping time exactly `L + 2` and at least `(2L - 13)/5` odd steps,
   hence `σ(n) ≥ 3.94 log n - c` for infinitely many `n` (`long_stopping_log`). The published
-  constant is 6.14 with 350 million codewords.
+  constant is 6.14316, with a certificate of about 350 million codewords (trees of depth ≤ 60).
 
 ## 7. The 2-adic map
 
@@ -195,21 +200,27 @@ even steps, so `p ≥ 301 994` (`CollatzBig.Ext.kstepT_period_ge`).
 parity sequence as a 2-adic integer.
 
 - `2^k ∣ Q x - Q y ↔ 2^k ∣ x - y`, the range of `Q` is closed and dense, and `Q ∘ T = shift ∘ Q`:
-  `Q` is an isometric bijection conjugating `T` to the shift (`Qequiv`, `Qequiv_conj`)
-  [Lagarias 1985]. The finite levels (`parityVec`) are permutations of the residues mod `2^k`.
+  `Q` is an isometric bijection conjugating `T` to the shift (`Qequiv`, `Qequiv_conj`).
+  Lagarias [1985, Thm L] states that `Q` is a measure-preserving homeomorphism (observed earlier by
+  Terras and Pomerance); the isometry and an explicit inverse are in Bernstein–Lagarias [1996]. The finite levels (`parityVec`) are permutations of the residues mod `2^k`.
 - Periodic points of the shift are `a/(1-2^p)`, so `ℤ₂` has exactly `2^p` points with
-  `T^p x = x`, each rational with odd denominator (`card_periodic`, `periodic_rational`).
+  `T^p x = x`, each rational with odd denominator (`card_periodic`, `periodic_rational`); rationality of
+  the periodic points also follows from Bernstein's formula for `Q⁻¹` [1994].
 - Haar measure on `ℤ₂` is constructed with `μ(closedBall a 2^-k) = 2^-k`; balls form a π-system
   generating the Borel σ-algebra. Isometric bijections and the shift preserve `μ`, hence so does
   `T`. The identity `μ(B ∩ shift^-k E) = 2^-k μ(E)` for balls `B` of radius `2^-k` gives
-  ergodicity, exactness and, with approximation by cylinder sets, strong mixing
-  [Matthews–Watts 1984, Lagarias 1985].
-- The parity sequence is a measure-preserving bijection onto the Bernoulli(1/2) product measure.
-  Mathlib's strong law and central limit theorem then give `s_n/n → 1/2` almost surely and
+  ergodicity, exactness and, with approximation by cylinder sets, strong mixing. Measure
+  preservation and strong mixing are due to Matthews–Watts [1984] (Lagarias [1985], Thm K).
+- The parity sequence is a measure-preserving bijection onto the Bernoulli(1/2) product measure
+  (so `T` is Bernoulli; cf. Lagarias [1985, Thm L], Bernstein–Lagarias [1996]). Mathlib's strong law and central limit theorem then give `s_n/n → 1/2` almost surely and
   `(s_n - n/2)/√n → N(0, 1/4)`; a block strong law over disjoint windows gives equidistribution of
-  almost every orbit mod `2^k` for every `k` (Lagarias' Theorem K).
-- **Bernstein's form** [1994]: since `3 Q 1 = -1`, `ReachesOne n ↔ 3 Q(n) ∈ ℤ` for `n ≥ 1`, so the
-  conjecture is equivalent to `3 Q(n) ∈ ℤ` for every positive integer.
+  almost every orbit mod `2^k` for every `k` (Matthews–Watts [1984]; Lagarias [1985, Thm K]).
+  The strong law and the CLT are immediate from the Bernoulli property; we know no specific source.
+- **The 2-adic form of the conjecture.** Since `3 Q 1 = -1`, `ReachesOne n ↔ 3 Q(n) ∈ ℤ` for
+  `n ≥ 1`, so the conjecture is equivalent to `3 Q(n) ∈ ℤ` for every positive integer
+  (`conjecture_iff_three_mul_Q`). This is Lagarias' third form of the conjecture [1985, §2.8];
+  Bernstein [1994] gave an explicit non-iterative formula for `Φ = Q⁻¹` and the equivalent statement
+  `ℤ⁺ ⊆ Φ(⅓ℤ)`, which we do not formalize.
 
 ## 8. Engineering notes
 
@@ -243,35 +254,37 @@ parity sequence as a 2-adic integer.
 ## References
 
 - D. Applegate, J. C. Lagarias, *Lower bounds for the total stopping time of 3x+1 iterates*,
-  Math. Comp. 72 (2003).
-- D. J. Bernstein, *A non-iterative 2-adic statement of the 3N+1 conjecture*, Proc. AMS 121 (1994).
-- R. E. Crandall, *On the "3x+1" problem*, Math. Comp. 32 (1978).
+  Math. Comp. 72 (2003), 1035–1049.
+- D. J. Bernstein, *A non-iterative 2-adic statement of the 3N+1 conjecture*, Proc. AMS 121 (1994), 405–408.
+- D. J. Bernstein, J. C. Lagarias, *The 3x+1 conjugacy map*, Canad. J. Math. 48 (1996), 1154–1169.
+- R. E. Crandall, *On the "3x+1" problem*, Math. Comp. 32 (1978), 1281–1292.
 - S. Eliahou, *The 3x+1 problem: new lower bounds on nontrivial cycle lengths*, Discrete Math.
-  118 (1993).
+  118 (1993), 45–56.
 - C. J. Everett, *Iteration of the number-theoretic function f(2n) = n, f(2n+1) = 3n+2*,
-  Adv. Math. 25 (1977).
-- I. Korec, *A density estimate for the 3x+1 problem*, Math. Slovaca 44 (1994).
+  Adv. Math. 25 (1977), 42–45.
+- I. Korec, *A density estimate for the 3x+1 problem*, Math. Slovaca 44 (1994), 85–89.
 - I. Krasikov, *How many numbers satisfy the 3x+1 conjecture?*, Internat. J. Math. Math. Sci. 12
-  (1989).
+  (1989), 791–796.
 - I. Krasikov, J. C. Lagarias, *Bounds for the 3x+1 problem using difference inequalities*,
-  Acta Arith. 109 (2003).
-- J. C. Lagarias, *The 3x+1 problem and its generalizations*, Amer. Math. Monthly 92 (1985).
+  Acta Arith. 109 (2003), 237–258.
+- J. C. Lagarias, *The 3x+1 problem and its generalizations*, Amer. Math. Monthly 92 (1985), 3–23.
 - K. R. Matthews, A. M. Watts, *A generalization of Hasse's generalization of the Syracuse
-  algorithm*, Acta Arith. 43 (1984).
+  algorithm*, Acta Arith. 43 (1984), 167–175.
 - J. Simons, B. de Weger, *Theoretical and computational bounds for m-cycles of the 3n+1 problem*,
-  Acta Arith. 117 (2005).
-- R. P. Steiner, *A theorem on the Syracuse problem*, Proc. 7th Manitoba Conf. Numer. Math. (1977).
+  Acta Arith. 117 (2005), 51–70.
+- R. P. Steiner, *A theorem on the Syracuse problem*, Proc. 7th Manitoba Conf. Numer. Math. Comput. (Winnipeg, 1977),
+  Congr. Numer. 20 (1978), 553–559.
 - T. Tao, *Almost all orbits of the Collatz map attain almost bounded values*, Forum Math. Pi 10
-  (2022).
-- R. Terras, *A stopping time problem on the positive integers*, Acta Arith. 30 (1976).
+  (2022), e12.
+- R. Terras, *A stopping time problem on the positive integers*, Acta Arith. 30 (1976), 241–252.
 - G. J. Wirsching, *The Dynamical System Generated by the 3n+1 Function*, LNM 1681, Springer (1998).
 
 ## Appendix: size of the development
 
 | Part | Size |
 | --- | --- |
-| Library `Collatz/` (35 files) | 5 873 lines, 1 184 declarations |
+| Library `Collatz/` (35 files) | 5 873 lines, 1 184 constants (including auxiliary ones) |
 | Tests `CollatzTest/` | 148 lines |
-| Generated chunks `CollatzBig/` | 10 263 chunk modules (43 MB), assemblies of 24 077 and 17 124 lines |
+| Generated chunks `CollatzBig/` | 10 267 chunk modules (about 2 MB of source), assemblies of 24 077 and 17 124 lines |
 | Kernel certificates | numerals of up to 630 million bits (circuit), 270 million (m-cycles) |
-| Computation | about 92 CPU-hours for the clean rebuild |
+| Computation | about 92 hours of compute for the clean rebuild on our machines |

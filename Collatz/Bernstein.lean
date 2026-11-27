@@ -1,10 +1,11 @@
 import Collatz.Periodic
 
 /-!
-# Bernstein's 2-adic reformulation of the Collatz conjecture
+# The 2-adic integrality form of the Collatz conjecture
 
-Bernstein (1994) observed that the Collatz conjecture is equivalent to an integrality statement
-about the conjugacy map `Q`: a positive integer `n` reaches `1` if and only if `3 Q(n)` is an
+The Collatz conjecture is equivalent to an integrality statement about the conjugacy map `Q`
+(Lagarias 1985, §2.8, "third form"; Bernstein 1994 restated it via an explicit formula for
+`Q⁻¹`, which is not formalized here): a positive integer `n` reaches `1` if and only if `3 Q(n)` is an
 ordinary integer, i.e. `Q(n) ∈ ℤ[1/3] ∩ ℤ₂ = (1/3) ℤ`.
 
 * `three_mul_Q_one`: `3 Q(1) = -1`, i.e. `Q(1) = -1/3 = …010101₂` (the parity sequence of the
@@ -134,7 +135,7 @@ theorem Q_two : Q (2 : ℤ_[2]) = 2 * Q 1 := by
 theorem three_mul_Q_two : 3 * Q (2 : ℤ_[2]) = -2 := by
   rw [Q_two]; linear_combination 2 * three_mul_Q_one
 
-/-! ## Bernstein's criterion -/
+/-! ## The integrality criterion -/
 
 /-- If `3 Q(x)` is an integer, so is `3 Q(T^m x)` for every `m`. -/
 lemma three_mul_Q_iterate_int {x : ℤ_[2]} {z : ℤ} (h : 3 * Q x = z) :
@@ -204,7 +205,7 @@ theorem exists_kstepT_of_three_mul_Q {n : ℕ} (hn : 1 ≤ n) {z : ℤ}
     have e' : kstepT^[z.natAbs] n = 0 := by exact_mod_cast e
     omega
 
-/-- **Bernstein's criterion**: a positive integer `n` reaches `1` iff `3 Q(n)` is an integer,
+/-- **Integrality criterion** (Lagarias' third form): a positive integer `n` reaches `1` iff `3 Q(n)` is an integer,
 i.e. iff the parity sequence of `n`, read as a 2-adic integer, lies in `(1/3) ℤ`. -/
 theorem reachesOne_iff_three_mul_Q {n : ℕ} (hn : 1 ≤ n) :
     ReachesOne n ↔ ∃ z : ℤ, (3 : ℤ_[2]) * Q (n : ℤ_[2]) = z := by
@@ -218,7 +219,7 @@ theorem reachesOne_iff_three_mul_Q {n : ℕ} (hn : 1 ≤ n) :
   · rintro ⟨z, hz⟩
     exact exists_kstepT_of_three_mul_Q hn hz
 
-/-- **Bernstein's reformulation of the Collatz conjecture**: it holds iff `3 Q(n) ∈ ℤ` for every
+/-- **2-adic integrality form of the Collatz conjecture** (Lagarias 1985; Bernstein 1994): it holds iff `3 Q(n) ∈ ℤ` for every
 positive integer `n`. -/
 theorem conjecture_iff_three_mul_Q :
     Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃ z : ℤ, (3 : ℤ_[2]) * Q (n : ℤ_[2]) = z :=
