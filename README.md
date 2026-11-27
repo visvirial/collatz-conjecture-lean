@@ -21,6 +21,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Defs.lean` | Mathlib-free computational definitions evaluated by the kernel |
 | `Collatz/Terras.lean` | Parity vector bijection and Terras' density theorem |
 | `Collatz/Korec.lean` | Density form of Terras' theorem; Korec's theorem |
+| `Collatz/Lagarias.lean` | The 3x+1 conjugacy map at every finite level |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -79,6 +80,21 @@ theorem korec {c : ℝ} (hc : Real.log 3 / Real.log 4 < c) (q : ℕ) : ∃ N0, �
 For `2^t ≤ n < 2^(t+1)` with `s` odd steps among the first `t`, `T^t n < 2·3^s + (3/2)^t`.
 The second moment `∑_{r < 2^t} (2 s(r) - t)^2 = t 2^t` shows that `s ≤ t (1 + 1/L) / 2` for
 all but `L^2 2^t / t` of these `n`, and then `T^t n < n ^ c` for large `t`.
+
+## The conjugacy map (`Collatz/Lagarias.lean`)
+
+`parityVec k n = ∑_{i < k} (T^i n mod 2) 2^i` is the level-`k` truncation of Lagarias'
+conjugacy map `Q_∞ : ℤ₂ → ℤ₂`:
+
+```lean
+theorem parityVec_eq_iff (k n n' : ℕ) : parityVec k n = parityVec k n' ↔ n % 2 ^ k = n' % 2 ^ k
+theorem parityVec_bijective (k : ℕ) : Function.Bijective (fun r : Fin (2 ^ k) => ⟨parityVec k r, _⟩)
+theorem parityVec_compat (k n : ℕ) : parityVec (k + 1) n % 2 ^ k = parityVec k n
+theorem parityVec_kstepT (k n : ℕ) : parityVec k (kstepT n) = parityVec (k + 1) n / 2
+```
+
+Together these say that `Q_∞` is a 2-adic isometry onto `ℤ₂` with `Q_∞ ∘ T = shift ∘ Q_∞`.
+The 2-adic map itself is not constructed here.
 
 ## Large verification (`CollatzBig`)
 
