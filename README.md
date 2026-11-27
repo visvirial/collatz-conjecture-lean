@@ -35,6 +35,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/StoppingDist.lean` | Exact count of coefficient stopping times for every `k` (`#goodSet 100`) |
 | `Collatz/TerrasD.lean` | Exponential decay of the stopping time tail (Lagarias' Theorem D) |
 | `Collatz/CoeffStop.lean` | Stopping time = coefficient stopping time from tables; bounded descent |
+| `Collatz/LongStop.lean` | Infinitely many `n` need `≥ 3.94 log n - c` steps to reach `1` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -248,6 +249,24 @@ the step needs `∑_a C (child % 27) (3/2^a)^(3/7) ≥ C (m % 27)` for each resi
 checked by `decide +kernel` with the constants from `scripts/krasikov_cert.py`.
 (Crandall 1978 proved such a bound for some `c > 0`, Krasikov 1989 the exponent `3/7`;
 Krasikov and Lagarias later reached `0.84` with computer-assisted inequalities.)
+
+## Long trajectories (`Collatz/LongStop.lean`)
+
+Going backwards from `4` with a potential on the residues mod `243` (Applegate-Lagarias'
+method, certificate from `scripts/longstop_cert.py`, checked by `decide +kernel`), every `L` has
+an `n` with total stopping time exactly `L + 2` and at least `(2L - 13)/5` odd steps:
+
+```lean
+theorem exists_long_stopping (L : ℕ) : ∃ n, kstepT^[L + 2] n = 1 ∧
+    (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧ 2 * L ≤ 5 * oddCount L n + 13 ∧
+    3 ^ oddCount L n * n ≤ 2 ^ (L + 2)
+theorem long_stopping_log (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+    5 * Real.log n - 17 * Real.log 3 ≤ (5 * Real.log 2 - 2 * Real.log 3) * (L + 2 : ℕ)
+```
+
+So infinitely many `n` reach `1` only after at least `γ log n - c` steps, `γ = 1/(log 2 - (2/5) log 3)
+≈ 3.94` (trivially `1/log 2 ≈ 1.44`; Applegate and Lagarias 2003 reached `6.14` with a certificate
+of 350 million codewords).
 
 ## Large verification (`CollatzBig`)
 

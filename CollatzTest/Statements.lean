@@ -43,6 +43,9 @@ example : (goodSet 100).card = 2 ^ 100 - 302560669500543257546172187 := goodSet_
 example (k : ℕ) : 1 - ((goodSet k).card : ℝ) / 2 ^ k ≤
     Real.exp (-((Real.log 2 - Real.binEntropy theta) * k)) := density_tail_le k
 
+example (L : ℕ) : ∃ n, kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+    2 * L ≤ 5 * oddCount L n + 13 ∧ 3 ^ oddCount L n * n ≤ 2 ^ (L + 2) := exists_long_stopping L
+
 /-! Sanity checks on the definitions. -/
 
 example : ReachesOne 27 := ⟨111, by decide +kernel⟩

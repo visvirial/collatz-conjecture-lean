@@ -15,6 +15,7 @@ import Collatz.Periodic
 import Collatz.StoppingTime
 import Collatz.StoppingDist
 import Collatz.TerrasD
+import Collatz.LongStop
 import Collatz.Haar
 import Collatz.Ergodic
 import Collatz.Bernoulli
