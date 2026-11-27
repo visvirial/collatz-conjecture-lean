@@ -25,6 +25,7 @@ import Collatz.Mixing
 import Collatz.Equidist
 import Collatz.Bernstein
 import Collatz.NatCycles
+import Collatz.Circuit
 import Collatz.Crandall
 import Collatz.Krasikov
 import Collatz.CoeffStopDefs

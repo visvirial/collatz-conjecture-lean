@@ -74,3 +74,12 @@ theorem CollatzBig.Ext.stopsBy_iff_goodSet (hk : k < 301994) (hn : 2 ≤ n) :
 
 `N = 7281311744` is past the threshold `7269381033` where `cycCheck2` first excludes `b < 190537`;
 `190537 = UQ` is the ceiling of this method, so larger verified ranges do not improve the bound.
+
+## Bounded circuit theorem (2026-11-27)
+
+`CollatzBig/CircuitCert.lean` (four `decide +kernel` inequalities between integers of up to 630
+million bits; 19 s, 1.4 GB) and `CollatzBig/Circuit.lean` were compiled with `lean -o` in the same
+rebuilt tree, together with `scripts/assemble_big.sh` and `scripts/assemble_ext.sh` for the current
+sources; `CollatzBig/Audit.lean`, `ExtAudit.lean` and `CircuitAudit.lean` all passed. The kernel
+limits every numeral to 2^30 bits (128 MB), which is why the Farey pair stops at
+`9809721694/6189245291 < log₂ 3 < 630138897/397573379` (see `scripts/circuit_cert.py`).

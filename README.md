@@ -36,6 +36,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/TerrasD.lean` | Exponential decay of the stopping time tail (Lagarias' Theorem D) |
 | `Collatz/CoeffStop.lean` | Stopping time = coefficient stopping time from tables; bounded descent |
 | `Collatz/LongStop.lean` | Infinitely many `n` need `≥ 3.94 log n - c` steps to reach `1` |
+| `Collatz/Circuit.lean` | No nontrivial 1-cycle (circuit) with fewer than 6586818670 odd steps, without Baker |
 | `Collatz/CLT.lean` | Central limit theorem for the parities on `ℤ_[2]` |
 | `Collatz/Mixing.lean` | `T` on `ℤ_[2]` is exact and strongly mixing |
 | `Collatz/Equidist.lean` | Almost every 2-adic orbit is equidistributed mod `2^k` for all `k` |
@@ -336,6 +337,18 @@ theorem CollatzBig.Ext.descends_below : ∀ n, 2 ≤ n → n < 7281311744 → De
 theorem CollatzBig.Ext.cycle_length_ge (hc : IsCycle n p) (hnr : ¬ ReachesOne n) : 492531 ≤ p
 theorem CollatzBig.Ext.kstepT_period_ge ... : 301994 ≤ p            -- accelerated convention
 theorem CollatzBig.Ext.stopsBy_iff_goodSet (hk : k < 301994) (hn : 2 ≤ n) : ...
+```
+
+`CollatzBig/Circuit.lean` (with `Collatz/Circuit.lean`) is a Baker-free, bounded form of Steiner's
+theorem: a circuit (`k` odd steps, then `l` even steps, back to `n`) satisfies
+`2^(k+l) n + 2^k = 3^k n + 3^k`, so `(k+l)/k` approximates `log₂ 3` within `1/(k n ln 2)`; with
+`n ≥ 7281311744` and the adjacent Farey fractions `9809721694/6189245291 < log₂ 3 < 630138897/397573379`
+(certified in the kernel, with numerals up to 79 MB, in `CollatzBig/CircuitCert.lean`) this forces
+`k ≥ 6586818670` unless the circuit is the trivial one:
+
+```lean
+theorem CollatzBig.Circuit.no_circuit {n k l : ℕ} (hc : IsCircuit n k l) (hk : k < 6586818670) :
+    n = 1 ∧ k = 1 ∧ l = 1
 ```
 
 `CollatzBig` is deliberately not a Lake target: `lake build` would recompile all chunks

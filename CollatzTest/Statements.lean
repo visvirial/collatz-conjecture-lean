@@ -53,6 +53,9 @@ example {A B : Set ℤ_[2]} (hA : MeasurableSet A) (hB : MeasurableSet B) :
     Filter.Tendsto (fun n => TwoAdic.μ (A ∩ TwoAdic.T^[n] ⁻¹' B)) Filter.atTop
       (nhds (TwoAdic.μ A * TwoAdic.μ B)) := TwoAdic.T_mixing hA hB
 
+example {n k l : ℕ} (hc : IsCircuit n k l) (hk : k < 1636) : n = 1 ∧ k = 1 ∧ l = 1 :=
+  no_circuit_lt_1636 hc hk
+
 /-! Sanity checks on the definitions. -/
 
 example : ReachesOne 27 := ⟨111, by decide +kernel⟩
