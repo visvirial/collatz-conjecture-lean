@@ -26,6 +26,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Periodic.lean` | Periodic points of the 2-adic map: count and rationality |
 | `Collatz/StoppingTime.lean` | Exact density of integers with stopping time `≤ k` |
 | `Collatz/Haar.lean` | `T` on `ℤ_[2]` preserves Haar measure |
+| `Collatz/Ergodic.lean` | `T` on `ℤ_[2]` is ergodic |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -124,6 +125,15 @@ theorem T_measurePreserving : MeasurePreserving T μ μ
 The balls form a π-system generating the Borel σ-algebra; isometric bijections such as `Q`
 map balls to balls, the shift pulls a ball back to two balls of half the radius, and
 `T = Q⁻¹ ∘ shift ∘ Q`.
+
+`Collatz/Ergodic.lean` shows that `T` is ergodic:
+
+```lean
+theorem T_ergodic : Ergodic T μ
+```
+
+For a ball `B` of radius `2^-k` and measurable `E`, `μ (B ∩ shift^[k] ⁻¹' E) = 2^-k μ E`; so a
+shift-invariant `S` satisfies `μ.restrict S = μ S • μ`, hence `μ S = μ S ^ 2`.
 
 ## Stopping times (`Collatz/StoppingTime.lean`)
 
