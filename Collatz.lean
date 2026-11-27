@@ -28,3 +28,5 @@ import Collatz.Crandall
 import Collatz.Krasikov
 import Collatz.CoeffStopDefs
 import Collatz.CoeffStop
+import Collatz.ExtDefs
+import Collatz.ExtKernel
