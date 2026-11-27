@@ -24,7 +24,7 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | Exact density of stopping time `≤ k`, exponential tail `≈ 2^(-0.05k)` | `density_stopsBy`, `density_tail_le` | Terras 1976, Lagarias 1985 (Thm D) |
 | Coefficient stopping time conjecture up to level `301993` | `CollatzBig.Ext.stopsBy_iff_goodSet` | Terras 1976 |
 | Almost every `n` gets below `n^c` for every `c > log 3 / log 4` | `korec` | Korec 1994 |
-| At least `κ N^(3/7)` integers `≤ N` reach 1 | `card_reachesOne_ge_three_sevenths` | Crandall 1978, Krasikov 1989 |
+| At least `κ N^0.4848` integers `≤ N` reach 1 | `card_reachesOne_ge_rpow_krasikov` | Crandall 1978, Krasikov 1989 (method) |
 | Infinitely many `n` need `≥ 5.38 log n - c` steps to reach 1 | `long_stopping_log_twelve` | Applegate–Lagarias 2003 (method) |
 | `T` on `ℤ₂` is conjugate to the shift by an isometric bijection `Q` | `TwoAdic.Qequiv`, `Qequiv_conj` | Lagarias 1985 (Thm L), Bernstein–Lagarias 1996 |
 | `ℤ₂` has exactly `2^p` points of period dividing `p`, all rational | `TwoAdic.card_periodic`, `periodic_rational` | cf. Lagarias 1985, Bernstein 1994 |
@@ -153,8 +153,8 @@ theorem korec {c : ℝ} (hc : Real.log 3 / Real.log 4 < c) (q : ℕ) : ∃ N0, �
 ```lean
 theorem card_reachesOne_ge_rpow (N : ℕ) (hN : 1 ≤ N) :
     (N : ℝ) ^ (Real.log 2 / Real.log 86) ≤ 2 * #{n ≤ N | ReachesOne n}
-theorem card_reachesOne_ge_three_sevenths : ∃ κ : ℝ, 0 < κ ∧ ∀ N : ℕ, 5 ≤ N →
-    κ * (N : ℝ) ^ ((3 : ℝ) / 7) ≤ #{n ≤ N | ReachesOne n}
+theorem card_reachesOne_ge_rpow_krasikov : ∃ κ : ℝ, 0 < κ ∧ ∀ N : ℕ, 5 ≤ N →
+    κ * (N : ℝ) ^ ((303 : ℝ) / 625) ≤ #{n ≤ N | ReachesOne n}
 theorem long_stopping_log_twelve (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
     13 * Real.log n - 85 * Real.log 3 ≤ (13 * Real.log 2 - 6 * Real.log 3) * (L + 2 : ℕ)
 ```
@@ -163,7 +163,12 @@ theorem long_stopping_log_twelve (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n
   `3 ≤ a ≤ 8` per residue mod `9`).
 - `Collatz/Krasikov.lean`: all exponents `2 ≤ a ≤ 30`, constants for the residues mod `27`, and the
   step inequality for every residue mod `81` checked by `decide +kernel`
-  (`scripts/krasikov_cert.py`). Krasikov–Lagarias reached `0.84` with much larger systems.
+  (`scripts/krasikov_cert.py`): Krasikov's exponent `3/7` (`card_reachesOne_ge_three_sevenths`).
+- `Collatz/KrasikovGen.lean`: the same argument with the modulus, exponent and weights as parameters;
+  with constants for the residues mod `3^9` (packed into one natural number) and integer weights
+  certified by `W_a^625 2^(303a) ≤ 3^303 2^(40·625)`, the exponent is `303/625 = 0.4848`
+  (`scripts/krasikov_gen_cert.py`; moduli `3^3 … 3^9` give `0.436 … 0.485`). Krasikov–Lagarias
+  reached `0.84` with a different system of difference inequalities.
 - `Collatz/LongStop.lean`, `Collatz/LongStopGen.lean`: a potential on the residues mod `3^J`
   (`scripts/longstop_cert.py`) gives backward paths from `4` in which a proportion `≥ P/Q` of the steps
   are odd. Mod `3^5` with `P/Q = 2/5` gives `γ = 1/(log 2 - (2/5) log 3) ≈ 3.94` (`long_stopping_log`);
@@ -251,7 +256,7 @@ is documented in [`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md).
 | `Collatz/Defs.lean`, `Kernel.lean`, `ExtDefs.lean`, `ExtKernel.lean`, `CoeffStopDefs.lean` | Mathlib-free kernel checkers and their soundness |
 | `Collatz/Cycle.lean`, `CycleBound.lean`, `NatCycles.lean`, `Circuit.lean`, `MCycle.lean` | Cycle constraints |
 | `Collatz/Terras.lean`, `Korec.lean`, `StoppingTime.lean`, `StoppingDist.lean`, `TerrasD.lean`, `CoeffStop.lean` | Density and stopping times |
-| `Collatz/Crandall.lean`, `Krasikov.lean`, `LongStop.lean`, `LongStopGen.lean`, `LongStop12.lean`, `LS12/` | Integers reaching 1, long trajectories |
+| `Collatz/Crandall.lean`, `Krasikov.lean`, `KrasikovGen.lean`, `LongStop.lean`, `LongStopGen.lean`, `LongStop12.lean`, `LS12/` | Integers reaching 1, long trajectories |
 | `Collatz/Lagarias.lean`, `TwoAdic.lean`, `Periodic.lean`, `Haar.lean`, `Ergodic.lean`, `Mixing.lean`, `Bernoulli.lean`, `LLN.lean`, `CLT.lean`, `Equidist.lean`, `Bernstein.lean` | The 2-adic map |
 | `CollatzTest/` | Axiom audit and headline statements (`lake test`) |
 | `CollatzBig/` | Generated chunk modules, assembly, audits, `PROVENANCE.md` |

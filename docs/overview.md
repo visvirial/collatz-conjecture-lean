@@ -12,12 +12,12 @@ nontrivial circuit with fewer than `6 586 818 670` odd steps) and of Simons–de
 `m`-cycles (up to `m = 469`); (iii) the density theorems of Terras, Everett and Korec, the exact
 distribution of stopping times and Lagarias' exponential tail bound, and Terras' coefficient
 stopping time conjecture up to level `301 993`; (iv) lower bounds for the number of integers
-reaching 1 (Crandall, Krasikov's exponent `3/7`) and for the length of convergent trajectories
+reaching 1 (Crandall; Krasikov's method, exponent `0.4848`) and for the length of convergent trajectories
 (Applegate–Lagarias' method, constant `5.38`); and (v) the 2-adic theory of the map: Lagarias' conjugacy as an
 isometric bijection of `ℤ₂`, periodic points, Haar measure preservation, exactness, strong mixing,
 the Bernoulli isomorphism, the strong law, the central limit theorem, equidistribution, and
 Lagarias' 2-adic form of the conjecture (`3Q(n) ∈ ℤ`). The conjecture itself is not proved. All
-1448 constants of the `Collatz` library (including auxiliary ones) and all `CollatzBig` headline
+1563 constants of the `Collatz` library (including auxiliary ones) and all `CollatzBig` headline
 theorems use only the axioms `propext`, `Classical.choice` and `Quot.sound`;
 there is no `sorry` and no `native_decide`.
 
@@ -183,10 +183,13 @@ even steps, so `p ≥ 301 994` (`CollatzBig.Ext.kstepT_period_ge`).
 - **Krasikov's exponent 3/7.** With all exponents `2 ≤ a ≤ 30` and constants `C_r` for the
   residues mod 27, induction on `x - m` gives `C_{m mod 27} (x/m)^{3/7} ≤ K · #(backward tree of
   m below x)`. The step needs one inequality per residue mod 81, checked by `decide +kernel` after
-  replacing `(3/2^a)^{3/7}` by rational lower bounds verified through seventh powers. In exploratory
-  computations (not in the repository), constants mod `3^h` gave exponents of about 0.436, 0.450,
-  0.460, 0.470 for `h = 3..6`; the
-  Krasikov–Lagarias exponent 0.84 needs a different, much larger system.
+  replacing `(3/2^a)^{3/7}` by rational lower bounds verified through seventh powers.
+  `Collatz/KrasikovGen.lean` proves the argument once for any modulus `M`, exponent `u/v` and integer
+  weights `W_a ≤ 2^k (3/2^a)^{u/v}` (certified by `W_a^v 2^{au} ≤ 3^u 2^{kv}`). With constants mod
+  `3^9` (19683 values packed into one natural number, 59049 inequalities checked in 27 kernel
+  pieces) the exponent is `303/625 = 0.4848` (`card_reachesOne_ge_rpow_krasikov`). The best
+  exponents of this scheme for the moduli `3^3, …, 3^9` are about 0.436, 0.450, 0.460, 0.470, 0.477,
+  0.482, 0.485; the Krasikov–Lagarias exponent 0.84 needs a different, much larger system.
 - **Long trajectories** [Applegate–Lagarias 2003]. A potential `h` on the residues mod 243 with
   `h(a) + 2 ≤ h(a') + 5·[odd move]` for some backward move from every residue mod 729
   prime to 3 gives, for
@@ -255,7 +258,7 @@ parity sequence as a 2-adic integer.
   Krasikov–Lagarias exponent 0.84, Applegate–Lagarias' constant 6.14 (we reach 5.38), and the full Steiner and
   Simons–de Weger theorems.
 - Natural extensions are larger certificates for the long-trajectory constant and the
-  Krasikov exponent, and an integrality argument for `m ≥ 2` in 4.3.
+  Krasikov exponent (both grow slowly with the modulus), and an integrality argument for `m ≥ 2` in 4.3.
 
 ## References
 
@@ -289,7 +292,7 @@ parity sequence as a 2-adic integer.
 
 | Part | Size |
 | --- | --- |
-| Library `Collatz/` (37 files, plus 42 generated in `Collatz/LS12/`) | 6 145 lines, 1 448 constants (including auxiliary ones) |
+| Library `Collatz/` (38 files, plus 42 generated in `Collatz/LS12/`) | 6 561 lines, 1 563 constants (including auxiliary ones) |
 | Tests `CollatzTest/` | 148 lines |
 | Generated chunks `CollatzBig/` | 10 267 chunk modules (about 2 MB of source), assemblies of 24 077 and 17 124 lines |
 | Kernel certificates | numerals of up to 630 million bits (circuit), 270 million (m-cycles) |

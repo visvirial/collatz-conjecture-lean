@@ -31,6 +31,7 @@ import Collatz.Circuit
 import Collatz.MCycle
 import Collatz.Crandall
 import Collatz.Krasikov
+import Collatz.KrasikovGen
 import Collatz.CoeffStopDefs
 import Collatz.CoeffStop
 import Collatz.ExtDefs

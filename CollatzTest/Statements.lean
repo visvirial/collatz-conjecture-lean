@@ -30,6 +30,11 @@ example : ∃ κ : ℝ, 0 < κ ∧ ∀ N : ℕ, 5 ≤ N →
     κ * (N : ℝ) ^ ((3 : ℝ) / 7) ≤ (((range (N + 1)).filter ReachesOne).card : ℝ) :=
   card_reachesOne_ge_three_sevenths
 
+open Classical in
+example : ∃ κ : ℝ, 0 < κ ∧ ∀ N : ℕ, 5 ≤ N →
+    κ * (N : ℝ) ^ ((303 : ℝ) / 625) ≤ (((range (N + 1)).filter ReachesOne).card : ℝ) :=
+  card_reachesOne_ge_rpow_krasikov
+
 example (x : ℤ_[2]) : TwoAdic.Qequiv (TwoAdic.T x) = TwoAdic.shift (TwoAdic.Qequiv x) :=
   TwoAdic.Qequiv_conj x
 example {p : ℕ} (hp : 1 ≤ p) : Nat.card {x : ℤ_[2] // TwoAdic.T^[p] x = x} = 2 ^ p :=
