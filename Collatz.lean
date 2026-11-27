@@ -18,6 +18,8 @@ import Collatz.TerrasD
 import Collatz.LongStop
 import Collatz.LongStopGen
 import Collatz.LongStop12
+import Collatz.LongStopFast
+import Collatz.LongStop15
 import Collatz.Haar
 import Collatz.Ergodic
 import Collatz.Bernoulli

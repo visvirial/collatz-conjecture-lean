@@ -1,5 +1,8 @@
 # collatz-conjecture-lean
 
+[![Lean Action CI](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/lean_action_ci.yml/badge.svg)](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/lean_action_ci.yml)
+[![CollatzBig (full re-verification)](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/big.yml/badge.svg)](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/big.yml)
+
 A Lean 4 + Mathlib formalization of partial results on the Collatz (3x+1) conjecture.
 
 **The conjecture itself is not proved.** `Collatz.Conjecture` is stated as a `Prop`. The library
@@ -25,7 +28,7 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | Coefficient stopping time conjecture up to level `301993` | `CollatzBig.Ext.stopsBy_iff_goodSet` | Terras 1976 |
 | Almost every `n` gets below `n^c` for every `c > log 3 / log 4` | `korec` | Korec 1994 |
 | At least `κ N^0.4848` integers `≤ N` reach 1 | `card_reachesOne_ge_rpow_krasikov` | Crandall 1978, Krasikov 1989 (method) |
-| Infinitely many `n` need `≥ 5.38 log n - c` steps to reach 1 | `long_stopping_log_twelve` | Applegate–Lagarias 2003 (method) |
+| Infinitely many `n` need `≥ 5.78 log n - c` steps to reach 1 | `long_stopping_log_fifteen` | Applegate–Lagarias 2003 (method) |
 | `T` on `ℤ₂` is conjugate to the shift by an isometric bijection `Q` | `TwoAdic.Qequiv`, `Qequiv_conj` | Lagarias 1985 (Thm L), Bernstein–Lagarias 1996 |
 | `ℤ₂` has exactly `2^p` points of period dividing `p`, all rational | `TwoAdic.card_periodic`, `periodic_rational` | cf. Lagarias 1985, Bernstein 1994 |
 | `T` preserves Haar measure, is exact, strongly mixing and Bernoulli | `T_measurePreserving`, `T_exact`, `T_mixing`, `paritySeq_measurePreserving` | Matthews–Watts 1984, Lagarias 1985 (Thms K, L), Bernstein–Lagarias 1996 |
@@ -155,8 +158,8 @@ theorem card_reachesOne_ge_rpow (N : ℕ) (hN : 1 ≤ N) :
     (N : ℝ) ^ (Real.log 2 / Real.log 86) ≤ 2 * #{n ≤ N | ReachesOne n}
 theorem card_reachesOne_ge_rpow_krasikov : ∃ κ : ℝ, 0 < κ ∧ ∀ N : ℕ, 5 ≤ N →
     κ * (N : ℝ) ^ ((303 : ℝ) / 625) ≤ #{n ≤ N | ReachesOne n}
-theorem long_stopping_log_twelve (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
-    13 * Real.log n - 85 * Real.log 3 ≤ (13 * Real.log 2 - 6 * Real.log 3) * (L + 2 : ℕ)
+theorem long_stopping_log_fifteen (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+    19 * Real.log n - 145 * Real.log 3 ≤ (19 * Real.log 2 - 9 * Real.log 3) * (L + 2 : ℕ)
 ```
 
 - `Collatz/Crandall.lean`: the backward tree from `1` branches at every node (two exponents
@@ -177,6 +180,14 @@ theorem long_stopping_log_twelve (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n
   reached `6.14` with about 350 million codewords). `Collatz/LongStop12.lean` uses `3^12` with
   `P/Q = 6/13` (531441 entries in 81 packed pieces, `scripts/longstop_pot.c`, `scripts/gen_ls12.py`,
   checked in the 40 generated modules `Collatz/LS12/C*.lean`, about 5 CPU-minutes): `γ ≈ 5.38`.
+  `Collatz/LongStop15.lean` uses `3^15` with `P/Q = 9/19`: `γ = 1/(log 2 - (9/19) log 3) ≈ 5.789`.
+  A faster check (`Collatz/LSF/Basic.lean`, `Collatz/LongStopFast.lean`) visits each source residue
+  once for its three lifts, only units, and splits the range into runs whose table lookups stay in
+  one piece, so the piece is a literal the kernel evaluates once (guards make wrong run hints only
+  fail); the 14348907 residues take about 10 CPU-minutes in 120 generated chunks
+  (`Collatz/LS15/`, `scripts/longstop_pot_omp.c`, `scripts/gen_lsf.py 15 9 19 7 2187 40000`).
+  The best ratios of this one-step potential grow slowly with the modulus (`3^16`: `21/44`,
+  `γ ≈ 5.92`; `3^17`: `11/23`, `γ ≈ 5.96`; `scripts/longstop_value.c`).
 
 ### The 2-adic map
 
@@ -256,7 +267,7 @@ is documented in [`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md).
 | `Collatz/Defs.lean`, `Kernel.lean`, `ExtDefs.lean`, `ExtKernel.lean`, `CoeffStopDefs.lean` | Mathlib-free kernel checkers and their soundness |
 | `Collatz/Cycle.lean`, `CycleBound.lean`, `NatCycles.lean`, `Circuit.lean`, `MCycle.lean` | Cycle constraints |
 | `Collatz/Terras.lean`, `Korec.lean`, `StoppingTime.lean`, `StoppingDist.lean`, `TerrasD.lean`, `CoeffStop.lean` | Density and stopping times |
-| `Collatz/Crandall.lean`, `Krasikov.lean`, `KrasikovGen.lean`, `LongStop.lean`, `LongStopGen.lean`, `LongStop12.lean`, `LS12/` | Integers reaching 1, long trajectories |
+| `Collatz/Crandall.lean`, `Krasikov.lean`, `KrasikovGen.lean`, `LongStop.lean`, `LongStopGen.lean`, `LongStop12.lean`, `LS12/`, `LongStopFast.lean`, `LSF/`, `LongStop15.lean`, `LS15/` | Integers reaching 1, long trajectories |
 | `Collatz/Lagarias.lean`, `TwoAdic.lean`, `Periodic.lean`, `Haar.lean`, `Ergodic.lean`, `Mixing.lean`, `Bernoulli.lean`, `LLN.lean`, `CLT.lean`, `Equidist.lean`, `Bernstein.lean` | The 2-adic map |
 | `CollatzTest/` | Axiom audit and headline statements (`lake test`) |
 | `CollatzBig/` | Generated chunk modules, assembly, audits, `PROVENANCE.md` |

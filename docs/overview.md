@@ -13,11 +13,11 @@ nontrivial circuit with fewer than `6 586 818 670` odd steps) and of Simons–de
 distribution of stopping times and Lagarias' exponential tail bound, and Terras' coefficient
 stopping time conjecture up to level `301 993`; (iv) lower bounds for the number of integers
 reaching 1 (Crandall; Krasikov's method, exponent `0.4848`) and for the length of convergent trajectories
-(Applegate–Lagarias' method, constant `5.38`); and (v) the 2-adic theory of the map: Lagarias' conjugacy as an
+(Applegate–Lagarias' method, constant `5.789`); and (v) the 2-adic theory of the map: Lagarias' conjugacy as an
 isometric bijection of `ℤ₂`, periodic points, Haar measure preservation, exactness, strong mixing,
 the Bernoulli isomorphism, the strong law, the central limit theorem, equidistribution, and
 Lagarias' 2-adic form of the conjecture (`3Q(n) ∈ ℤ`). The conjecture itself is not proved. All
-1563 constants of the `Collatz` library (including auxiliary ones) and all `CollatzBig` headline
+8858 constants of the `Collatz` library (including auxiliary and generated ones) and all `CollatzBig` headline
 theorems use only the axioms `propext`, `Classical.choice` and `Quot.sound`;
 there is no `sorry` and no `native_decide`.
 
@@ -200,7 +200,13 @@ even steps, so `p ≥ 301 994` (`CollatzBig.Ext.kstepT_period_ge`).
   (`long_stopping_log_ten`). Mod `3^12` with ratio `6/13` the table has 531441 entries; a single
   literal of that size elaborates in quadratic time (minutes), so it is stored in 81 pieces and the
   check is split over 40 generated modules (about 5 CPU-minutes), giving `γ ≈ 5.38`
-  (`long_stopping_log_twelve`). The published
+  (`long_stopping_log_twelve`). A check that visits each source residue once for its three lifts
+  and groups lookups into runs inside one table piece (so the piece is a literal the kernel
+  evaluates once) is about 15 times faster; mod `3^15` with ratio `9/19` (14348907 residues, 120
+  chunks, about 10 CPU-minutes) it gives `γ ≈ 5.789` (`long_stopping_log_fifteen`). Applegate and
+  Lagarias' prefix-code certificates have sizes comparable to these tables (8.0M codewords for
+  `8/17`, 16.7M for `9/19`, 351M for `14/29`); the one-step potential mod `3^J` reaches about
+  `0.4773` at `J = 16`, so `γ ≈ 6` would need `J ≈ 18`. The published
   constant is 6.14316, with a certificate of about 350 million codewords (trees of depth ≤ 60).
 
 ## 7. The 2-adic map
@@ -255,7 +261,7 @@ parity sequence as a 2-adic integer.
 - The verified range (`7.3·10^9`) is far below published computations; it was chosen as the point
   where the cycle method saturates.
 - Not formalized: Tao's theorem that almost all orbits attain almost bounded values, the
-  Krasikov–Lagarias exponent 0.84, Applegate–Lagarias' constant 6.14 (we reach 5.38), and the full Steiner and
+  Krasikov–Lagarias exponent 0.84, Applegate–Lagarias' constant 6.14 (we reach 5.789), and the full Steiner and
   Simons–de Weger theorems.
 - Natural extensions are larger certificates for the long-trajectory constant and the
   Krasikov exponent (both grow slowly with the modulus), and an integrality argument for `m ≥ 2` in 4.3.
@@ -292,7 +298,7 @@ parity sequence as a 2-adic integer.
 
 | Part | Size |
 | --- | --- |
-| Library `Collatz/` (38 files, plus 42 generated in `Collatz/LS12/`) | 6 561 lines, 1 563 constants (including auxiliary ones) |
+| Library `Collatz/` (40 files, plus 245 in `Collatz/LS12/`, `LS15/`, `LSF/`, mostly generated) | 7103 lines (excluding those directories), 8 858 constants (including auxiliary and generated ones) |
 | Tests `CollatzTest/` | 148 lines |
 | Generated chunks `CollatzBig/` | 10 267 chunk modules (about 2 MB of source), assemblies of 24 077 and 17 124 lines |
 | Kernel certificates | numerals of up to 630 million bits (circuit), 270 million (m-cycles) |

@@ -60,6 +60,10 @@ example (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, 
     13 * Real.log n - 85 * Real.log 3 ≤ (13 * Real.log 2 - 6 * Real.log 3) * (L + 2 : ℕ) :=
   long_stopping_log_twelve L
 
+example (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+    19 * Real.log n - 145 * Real.log 3 ≤ (19 * Real.log 2 - 9 * Real.log 3) * (L + 2 : ℕ) :=
+  long_stopping_log_fifteen L
+
 example : Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃ z : ℤ, (3 : ℤ_[2]) * TwoAdic.Q (n : ℤ_[2]) = z :=
   TwoAdic.conjecture_iff_three_mul_Q
 example {A B : Set ℤ_[2]} (hA : MeasurableSet A) (hB : MeasurableSet B) :
