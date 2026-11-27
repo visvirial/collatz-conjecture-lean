@@ -319,7 +319,8 @@ scripts/assemble_big.sh                                       # All, Bridge, and
 ```
 
 `CollatzBig` is deliberately not a Lake target: `lake build` would recompile all chunks
-(about 4.5 GB of memory each). `CollatzBig/PROVENANCE.md` records the last clean rebuild.
+(about 4.5 GB of memory each). `CollatzBig/PROVENANCE.md` records the last clean rebuild (6008 chunks from a `git archive`,
+53.9 CPU-hours, assembled and axiom-audited).
 
 ## Build
 
