@@ -23,6 +23,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Korec.lean` | Density form of Terras' theorem; Korec's theorem |
 | `Collatz/Lagarias.lean` | The 3x+1 conjugacy map at every finite level |
 | `Collatz/TwoAdic.lean` | `T` on `ℤ_[2]`; Lagarias' conjugacy map as an isometric bijection |
+| `Collatz/Periodic.lean` | Periodic points of the 2-adic map: count and rationality |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -103,6 +104,13 @@ theorem Qequiv_conj (x : ℤ_[2]) : Qequiv (T x) = shift (Qequiv x)
 ```
 
 so `T` on `ℤ₂` is conjugate to the shift `y ↦ (y - par y) / 2`.
+`Collatz/Periodic.lean` uses this to describe all periodic points:
+
+```lean
+theorem card_periodic {p : ℕ} (hp : 1 ≤ p) : Nat.card {x : ℤ_[2] // T^[p] x = x} = 2 ^ p
+theorem periodic_rational {p : ℕ} (hp : 1 ≤ p) {x : ℤ_[2]} (hx : T^[p] x = x) :
+    ∃ a b : ℤ, Odd b ∧ (b : ℤ_[2]) * x = a
+```
 
 ## Large verification (`CollatzBig`)
 
