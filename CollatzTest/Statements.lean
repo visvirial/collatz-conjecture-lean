@@ -46,6 +46,12 @@ example (k : ℕ) : 1 - ((goodSet k).card : ℝ) / 2 ^ k ≤
 example (L : ℕ) : ∃ n, kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
     2 * L ≤ 5 * oddCount L n + 13 ∧ 3 ^ oddCount L n * n ≤ 2 ^ (L + 2) := exists_long_stopping L
 
+example : Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃ z : ℤ, (3 : ℤ_[2]) * TwoAdic.Q (n : ℤ_[2]) = z :=
+  TwoAdic.conjecture_iff_three_mul_Q
+example {A B : Set ℤ_[2]} (hA : MeasurableSet A) (hB : MeasurableSet B) :
+    Filter.Tendsto (fun n => TwoAdic.μ (A ∩ TwoAdic.T^[n] ⁻¹' B)) Filter.atTop
+      (nhds (TwoAdic.μ A * TwoAdic.μ B)) := TwoAdic.T_mixing hA hB
+
 /-! Sanity checks on the definitions. -/
 
 example : ReachesOne 27 := ⟨111, by decide +kernel⟩

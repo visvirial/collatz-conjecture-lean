@@ -36,6 +36,9 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/TerrasD.lean` | Exponential decay of the stopping time tail (Lagarias' Theorem D) |
 | `Collatz/CoeffStop.lean` | Stopping time = coefficient stopping time from tables; bounded descent |
 | `Collatz/LongStop.lean` | Infinitely many `n` need `≥ 3.94 log n - c` steps to reach `1` |
+| `Collatz/CLT.lean` | Central limit theorem for the parities on `ℤ_[2]` |
+| `Collatz/Mixing.lean` | `T` on `ℤ_[2]` is exact and strongly mixing |
+| `Collatz/Bernstein.lean` | Conjecture ⟺ `3 Q(n)` is an integer for every `n ≥ 1` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -169,6 +172,29 @@ theorem odd_fraction_ae :
 theorem multiplier_rate_ae :
     ∀ᵐ x ∂μ, Tendsto (fun n => Real.log (3 ^ oddCount2 n x / 2 ^ n) / n) atTop
       (𝓝 (Real.log 3 / 2 - Real.log 2))
+```
+
+`Collatz/CLT.lean` adds the central limit theorem (Mathlib's
+`tendstoInDistribution_inv_sqrt_mul_sum_sub`, transported along `paritySeq`), and
+`Collatz/Mixing.lean` shows that `T` is exact and strongly mixing:
+
+```lean
+theorem oddCount2_clt (hZ : HasLaw Z (gaussianReal 0 (1 / 4)) P') :
+    TendstoInDistribution (fun n x => ((oddCount2 n x : ℝ) - n / 2) / √n) atTop Z (fun _ => μ) P'
+theorem T_exact (hS : ∀ n, ∃ E, MeasurableSet E ∧ S = T^[n] ⁻¹' E) : μ S = 0 ∨ μ S = 1
+theorem T_mixing (hA : MeasurableSet A) (hB : MeasurableSet B) :
+    Tendsto (fun n => μ (A ∩ T^[n] ⁻¹' B)) atTop (𝓝 (μ A * μ B))
+```
+
+`Collatz/Bernstein.lean` gives Bernstein's (1994) non-iterative 2-adic form of the conjecture:
+since `3 Q 1 = -1`, an orbit reaching `1` has `3 Q n ∈ ℤ`, and conversely the integers
+`3 Q (T^m n)` eventually lie in `{-3, -2, -1, 0}`, where `Q` is injective:
+
+```lean
+theorem reachesOne_iff_three_mul_Q (hn : 1 ≤ n) :
+    ReachesOne n ↔ ∃ z : ℤ, (3 : ℤ_[2]) * Q (n : ℤ_[2]) = z
+theorem conjecture_iff_three_mul_Q :
+    Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃ z : ℤ, 3 * Q (n : ℤ_[2]) = z
 ```
 
 ## Stopping times (`Collatz/StoppingTime.lean`)

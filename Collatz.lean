@@ -20,6 +20,9 @@ import Collatz.Haar
 import Collatz.Ergodic
 import Collatz.Bernoulli
 import Collatz.LLN
+import Collatz.CLT
+import Collatz.Mixing
+import Collatz.Bernstein
 import Collatz.NatCycles
 import Collatz.Crandall
 import Collatz.Krasikov
