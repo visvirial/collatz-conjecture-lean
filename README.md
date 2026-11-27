@@ -101,6 +101,10 @@ python3 scripts/gen_big.py 24 256 1000 6000 8 plan.txt
 lake build CollatzBig
 ```
 
+`scripts/distributed/` compiles the chunk modules in parallel on several machines over ssh
+(`run.sh WORKDIR local:8 host:24`), with `watch.sh` reporting completion, failures, dead
+workers and stalls.
+
 ## Build
 
 ```sh

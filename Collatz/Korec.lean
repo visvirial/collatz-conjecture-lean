@@ -38,22 +38,6 @@ theorem density_not_descends :
   nlinarith [mul_le_mul_of_nonneg_left h' hε.le, mul_le_mul_of_nonneg_right hq'.le hc0,
     mul_pos hε (by linarith : (0 : ℝ) < N)]
 
-/-! ## Pairing residues mod `2^(k+1)` -/
-
-lemma sum_pair {M : Type*} [AddCommMonoid M] (f : ℕ → M) (k : ℕ) :
-    ∑ r ∈ range (2 ^ (k + 1)), f (oddCount (k + 1) r) =
-      ∑ r ∈ range (2 ^ k), (f (oddCount k r) + f (oddCount k r + 1)) := by
-  rw [pow_succ, mul_two, sum_range_add, ← sum_add_distrib]
-  refine sum_congr rfl (fun r _ => ?_)
-  rw [oddCount_succ, oddCount_succ, iterate_pow_add,
-    show 2 ^ k + r = 2 ^ k * 1 + r by ring, oddCount_affine k le_rfl]
-  have h3 := three_pow_mod_two (oddCount k r)
-  rcases Nat.mod_two_eq_zero_or_one (kstepT^[k] r) with h | h
-  · have hx : (3 ^ oddCount k r + kstepT^[k] r) % 2 = 1 := by omega
-    rw [h, hx, Nat.add_zero]
-  · have hx : (3 ^ oddCount k r + kstepT^[k] r) % 2 = 0 := by omega
-    rw [h, hx, add_comm]; rfl
-
 /-- Second moment: the number of odd steps is concentrated around `k / 2`. -/
 theorem sum_sq (k : ℕ) :
     ∑ r ∈ range (2 ^ k), ((2 * oddCount k r : ℤ) - (k : ℕ)) ^ 2 = (k : ℕ) * 2 ^ k := by

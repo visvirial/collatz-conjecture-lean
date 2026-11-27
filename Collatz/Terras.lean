@@ -135,28 +135,32 @@ theorem parity_bijective (k : ℕ) :
 
 /-! ## Counting residues by their number of odd steps -/
 
+/-- Residues `r` and `2^k + r` share their first `k` parities and differ at step `k`. -/
+lemma sum_pair {M : Type*} [AddCommMonoid M] (f : ℕ → M) (k : ℕ) :
+    ∑ r ∈ range (2 ^ (k + 1)), f (oddCount (k + 1) r) =
+      ∑ r ∈ range (2 ^ k), (f (oddCount k r) + f (oddCount k r + 1)) := by
+  rw [pow_succ, mul_two, sum_range_add, ← sum_add_distrib]
+  refine sum_congr rfl (fun r _ => ?_)
+  rw [oddCount_succ, oddCount_succ, iterate_pow_add,
+    show 2 ^ k + r = 2 ^ k * 1 + r by ring, oddCount_affine k le_rfl]
+  have h3 := three_pow_mod_two (oddCount k r)
+  rcases Nat.mod_two_eq_zero_or_one (kstepT^[k] r) with h | h
+  · have hx : (3 ^ oddCount k r + kstepT^[k] r) % 2 = 1 := by omega
+    rw [h, hx, Nat.add_zero]
+  · have hx : (3 ^ oddCount k r + kstepT^[k] r) % 2 = 0 := by omega
+    rw [h, hx, add_comm]; rfl
+
 theorem sum_weight (a b : ℕ) : ∀ k : ℕ,
     ∑ r ∈ range (2 ^ k), a ^ oddCount k r * b ^ (k - oddCount k r) = (a + b) ^ k
   | 0 => by simp [oddCount]
   | k + 1 => by
-    rw [pow_succ, mul_two, sum_range_add, ← sum_add_distrib, pow_succ, ← sum_weight a b k,
-      sum_mul]
+    rw [sum_pair (fun s => a ^ s * b ^ (k + 1 - s)) k, pow_succ, ← sum_weight a b k, sum_mul]
     refine sum_congr rfl (fun r _ => ?_)
     have hs := oddCount_le k r
-    rw [oddCount_succ, oddCount_succ, iterate_pow_add,
-      show 2 ^ k + r = 2 ^ k * 1 + r by ring, oddCount_affine k le_rfl]
     obtain ⟨t, ht⟩ : ∃ t, k - oddCount k r = t := ⟨_, rfl⟩
-    have h3 := three_pow_mod_two (oddCount k r)
-    rw [ht]
-    rcases Nat.mod_two_eq_zero_or_one (kstepT^[k] r) with h | h
-    · have hx : (3 ^ oddCount k r + kstepT^[k] r) % 2 = 1 := by omega
-      rw [h, hx, show k + 1 - (oddCount k r + 0) = t + 1 by omega,
-        show k + 1 - (oddCount k r + 1) = t by omega]
-      ring
-    · have hx : (3 ^ oddCount k r + kstepT^[k] r) % 2 = 0 := by omega
-      rw [h, hx, show k + 1 - (oddCount k r + 1) = t by omega,
-        show k + 1 - (oddCount k r + 0) = t + 1 by omega]
-      ring
+    rw [ht, show k + 1 - oddCount k r = t + 1 by omega,
+      show k + 1 - (oddCount k r + 1) = t by omega]
+    ring
 
 /-- Residues mod `2^k` whose first `k` steps do not shrink the coefficient. -/
 def badSet (k : ℕ) : Finset ℕ := (range (2 ^ k)).filter (fun r => 2 ^ k ≤ 3 ^ oddCount k r)
