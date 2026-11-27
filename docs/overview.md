@@ -13,11 +13,11 @@ nontrivial circuit with fewer than `6 586 818 670` odd steps) and of Simons–de
 distribution of stopping times and Lagarias' exponential tail bound, and Terras' coefficient
 stopping time conjecture up to level `301 993`; (iv) lower bounds for the number of integers
 reaching 1 (Crandall, Krasikov's exponent `3/7`) and for the length of convergent trajectories
-(Applegate–Lagarias' method); and (v) the 2-adic theory of the map: Lagarias' conjugacy as an
+(Applegate–Lagarias' method, constant `5.03`); and (v) the 2-adic theory of the map: Lagarias' conjugacy as an
 isometric bijection of `ℤ₂`, periodic points, Haar measure preservation, exactness, strong mixing,
 the Bernoulli isomorphism, the strong law, the central limit theorem, equidistribution, and
 Lagarias' 2-adic form of the conjecture (`3Q(n) ∈ ℤ`). The conjecture itself is not proved. All
-1184 constants of the `Collatz` library (including auxiliary ones) and all `CollatzBig` headline
+1275 constants of the `Collatz` library (including auxiliary ones) and all `CollatzBig` headline
 theorems use only the axioms `propext`, `Classical.choice` and `Quot.sound`;
 there is no `sorry` and no `native_decide`.
 
@@ -191,7 +191,11 @@ even steps, so `p ≥ 301 994` (`CollatzBig.Ext.kstepT_period_ge`).
   `h(a) + 2 ≤ h(a') + 5·[odd move]` for some backward move from every residue mod 729
   prime to 3 gives, for
   every `L`, an `n` with total stopping time exactly `L + 2` and at least `(2L - 13)/5` odd steps,
-  hence `σ(n) ≥ 3.94 log n - c` for infinitely many `n` (`long_stopping_log`). The published
+  hence `σ(n) ≥ 3.94 log n - c` for infinitely many `n` (`long_stopping_log`). The same argument with
+  the modulus as a parameter (`Collatz/LongStopGen.lean`) and a potential mod `3^10` with ratio
+  `9/20`, packed into one natural number and checked in 27 kernel pieces, gives `γ ≈ 5.03`
+  (`long_stopping_log_ten`); ratios `5/11` and `6/13` are available mod `3^11` and `3^12`
+  (`γ ≈ 5.16`, `5.38`). The published
   constant is 6.14316, with a certificate of about 350 million codewords (trees of depth ≤ 60).
 
 ## 7. The 2-adic map
@@ -246,10 +250,10 @@ parity sequence as a 2-adic integer.
 - The verified range (`7.3·10^9`) is far below published computations; it was chosen as the point
   where the cycle method saturates.
 - Not formalized: Tao's theorem that almost all orbits attain almost bounded values, the
-  Krasikov–Lagarias exponent 0.84, Applegate–Lagarias' constant 6.14, and the full Steiner and
+  Krasikov–Lagarias exponent 0.84, Applegate–Lagarias' constant 6.14 (we reach 5.03), and the full Steiner and
   Simons–de Weger theorems.
-- Natural extensions are larger certificates for the long-trajectory constant and the Krasikov
-  exponent, and an integrality argument for `m ≥ 2` in 4.3.
+- Natural extensions are larger certificates for the long-trajectory constant (mod `3^12`) and the
+  Krasikov exponent, and an integrality argument for `m ≥ 2` in 4.3.
 
 ## References
 
@@ -283,7 +287,7 @@ parity sequence as a 2-adic integer.
 
 | Part | Size |
 | --- | --- |
-| Library `Collatz/` (35 files) | 5 873 lines, 1 184 constants (including auxiliary ones) |
+| Library `Collatz/` (36 files) | 6 059 lines, 1 275 constants (including auxiliary ones) |
 | Tests `CollatzTest/` | 148 lines |
 | Generated chunks `CollatzBig/` | 10 267 chunk modules (about 2 MB of source), assemblies of 24 077 and 17 124 lines |
 | Kernel certificates | numerals of up to 630 million bits (circuit), 270 million (m-cycles) |

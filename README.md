@@ -25,7 +25,7 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | Coefficient stopping time conjecture up to level `301993` | `CollatzBig.Ext.stopsBy_iff_goodSet` | Terras 1976 |
 | Almost every `n` gets below `n^c` for every `c > log 3 / log 4` | `korec` | Korec 1994 |
 | At least `κ N^(3/7)` integers `≤ N` reach 1 | `card_reachesOne_ge_three_sevenths` | Crandall 1978, Krasikov 1989 |
-| Infinitely many `n` need `≥ 3.94 log n - c` steps to reach 1 | `long_stopping_log` | Applegate–Lagarias 2003 (method) |
+| Infinitely many `n` need `≥ 5.03 log n - c` steps to reach 1 | `long_stopping_log_ten` | Applegate–Lagarias 2003 (method) |
 | `T` on `ℤ₂` is conjugate to the shift by an isometric bijection `Q` | `TwoAdic.Qequiv`, `Qequiv_conj` | Lagarias 1985 (Thm L), Bernstein–Lagarias 1996 |
 | `ℤ₂` has exactly `2^p` points of period dividing `p`, all rational | `TwoAdic.card_periodic`, `periodic_rational` | cf. Lagarias 1985, Bernstein 1994 |
 | `T` preserves Haar measure, is exact, strongly mixing and Bernoulli | `T_measurePreserving`, `T_exact`, `T_mixing`, `paritySeq_measurePreserving` | Matthews–Watts 1984, Lagarias 1985 (Thms K, L), Bernstein–Lagarias 1996 |
@@ -155,8 +155,8 @@ theorem card_reachesOne_ge_rpow (N : ℕ) (hN : 1 ≤ N) :
     (N : ℝ) ^ (Real.log 2 / Real.log 86) ≤ 2 * #{n ≤ N | ReachesOne n}
 theorem card_reachesOne_ge_three_sevenths : ∃ κ : ℝ, 0 < κ ∧ ∀ N : ℕ, 5 ≤ N →
     κ * (N : ℝ) ^ ((3 : ℝ) / 7) ≤ #{n ≤ N | ReachesOne n}
-theorem long_stopping_log (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
-    5 * Real.log n - 17 * Real.log 3 ≤ (5 * Real.log 2 - 2 * Real.log 3) * (L + 2 : ℕ)
+theorem long_stopping_log_ten (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+    20 * Real.log n - 107 * Real.log 3 ≤ (20 * Real.log 2 - 9 * Real.log 3) * (L + 2 : ℕ)
 ```
 
 - `Collatz/Crandall.lean`: the backward tree from `1` branches at every node (two exponents
@@ -164,9 +164,12 @@ theorem long_stopping_log (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] n = 1 �
 - `Collatz/Krasikov.lean`: all exponents `2 ≤ a ≤ 30`, constants for the residues mod `27`, and the
   step inequality for every residue mod `81` checked by `decide +kernel`
   (`scripts/krasikov_cert.py`). Krasikov–Lagarias reached `0.84` with much larger systems.
-- `Collatz/LongStop.lean`: a potential on the residues mod `243` (`scripts/longstop_cert.py`) gives
-  backward paths from `4` with at least `(2L - 13)/5` odd steps, so `γ = 1/(log 2 - (2/5) log 3) ≈ 3.94`
-  (trivially `1/log 2 ≈ 1.44`; Applegate–Lagarias reached `6.14` with 350 million codewords).
+- `Collatz/LongStop.lean`, `Collatz/LongStopGen.lean`: a potential on the residues mod `3^J`
+  (`scripts/longstop_cert.py`) gives backward paths from `4` in which a proportion `≥ P/Q` of the steps
+  are odd. Mod `3^5` with `P/Q = 2/5` gives `γ = 1/(log 2 - (2/5) log 3) ≈ 3.94` (`long_stopping_log`);
+  mod `3^10` with `P/Q = 9/20` (a packed table of 59049 entries, checked by `decide +kernel` in 27
+  pieces) gives `γ = 1/(log 2 - (9/20) log 3) ≈ 5.03` (trivially `1/log 2 ≈ 1.44`; Applegate–Lagarias
+  reached `6.14` with about 350 million codewords). Mod `3^12` would give `P/Q = 6/13`, `γ ≈ 5.38`.
 
 ### The 2-adic map
 
