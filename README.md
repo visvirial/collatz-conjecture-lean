@@ -31,6 +31,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/LLN.lean` | Strong law of large numbers for the parities on `ℤ_[2]` |
 | `Collatz/NatCycles.lean` | Integer periodic points of the 2-adic map are Collatz cycles |
 | `Collatz/Crandall.lean` | At least `N^0.155` integers `≤ N` reach `1` |
+| `Collatz/Krasikov.lean` | At least `κ N^(3/7)` integers `≤ N` reach `1` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -192,7 +193,19 @@ theorem card_reachesOne_ge_rpow (N : ℕ) (hN : 1 ≤ N) :
     (N : ℝ) ^ (Real.log 2 / Real.log 86) ≤ 2 * #{n ≤ N | ReachesOne n}
 ```
 
-(Crandall 1978 proved such a bound for some `c > 0`; Krasikov and Lagarias reached `c = 0.84`.)
+`Collatz/Krasikov.lean` uses all exponents `2 ≤ a ≤ 30` and constants for the residues mod `27`
+to reach Krasikov's exponent:
+
+```lean
+theorem card_reachesOne_ge_three_sevenths : ∃ κ : ℝ, 0 < κ ∧ ∀ N : ℕ, 5 ≤ N →
+    κ * (N : ℝ) ^ ((3 : ℝ) / 7) ≤ #{n ≤ N | ReachesOne n}
+```
+
+By induction on `x - m`, `C (m % 27) (x/m)^(3/7) ≤ K #{odd n ≤ x whose backward orbit hits m}`;
+the step needs `∑_a C (child % 27) (3/2^a)^(3/7) ≥ C (m % 27)` for each residue mod `81`,
+checked by `decide +kernel` with the constants from `scripts/krasikov_cert.py`.
+(Crandall 1978 proved such a bound for some `c > 0`, Krasikov 1989 the exponent `3/7`;
+Krasikov and Lagarias later reached `0.84` with computer-assisted inequalities.)
 
 ## Large verification (`CollatzBig`)
 

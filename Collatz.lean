@@ -19,3 +19,4 @@ import Collatz.Bernoulli
 import Collatz.LLN
 import Collatz.NatCycles
 import Collatz.Crandall
+import Collatz.Krasikov
