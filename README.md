@@ -17,6 +17,7 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | Every `2 ≤ n < 7281311744` (`= 434·2^24`) drops below itself, hence reaches 1 | `CollatzBig.Ext.descends_below` | (verification) |
 | A nontrivial cycle has length `≥ 492531` (`≥ 301994` in the accelerated convention) | `CollatzBig.Ext.cycle_length_ge` | cf. Eliahou 1993 |
 | No nontrivial circuit (1-cycle) with fewer than `6586818670` odd steps, without Baker | `CollatzBig.Circuit.no_circuit` | Steiner 1977 (bounded form) |
+| No nontrivial cycle with `≤ 68` odd blocks and fewer than `64497107` odd steps (up to 469 blocks with smaller bounds) | `CollatzBig.MCycle.reachesOne_of_blocks_le_68` | Simons–de Weger 2005 (bounded form) |
 | Conjecture ⟺ descent in 64 of the 1024 classes mod `2^10` | `conjecture_iff_survivors_descend` | Terras, Everett |
 | Almost every `n` drops below itself (density 0 of exceptions) | `almost_all_descend`, `density_not_descends` | Terras 1976, Everett 1977 |
 | Exact density of stopping time `≤ k`, exponential tail `≈ 2^(-0.05k)` | `density_stopsBy`, `density_tail_le` | Terras 1976, Lagarias 1985 (Thm D) |
@@ -88,6 +89,23 @@ trivial one (`Collatz/Circuit.lean`, `CollatzBig/Circuit.lean`):
 theorem CollatzBig.Circuit.no_circuit {n k l : ℕ} (hc : IsCircuit n k l) (hk : k < 6586818670) :
     n = 1 ∧ k = 1 ∧ l = 1
 ```
+
+More generally (`Collatz/MCycle.lean`, `CollatzBig/MCycle.lean`), a `T`-cycle of length `K` with
+`k` odd steps, `m` odd blocks and all elements `≥ N` satisfies `N^m 2^K ≤ (N+1)^m 3^k` (only block
+starts contribute), so `0 < K ln 2 - k ln 3 ≤ m ln(1 + 1/N)`. One Farey pair per range of `m` then
+excludes all lattice points (`scripts/mcycle_cert.py`, certificates in `CollatzBig/MCycleCert.lean`):
+
+| odd blocks `m ≤` | 13 | 38 | 63 | 68 | 88 | 469 |
+| --- | --- | --- | --- | --- | --- | --- |
+| no nontrivial cycle with odd steps `<` | 397573379 | 171928773 | 118212940 | 64497107 | 64497107 | 10781274 |
+
+```lean
+theorem CollatzBig.MCycle.reachesOne_of_blocks_le_68 (hn : 1 ≤ n) (hK : 1 ≤ K)
+    (hper : kstepT^[K] n = n) (hm : oddBlocks K n ≤ 68) (hk : oddCount K n < 64497107) : ReachesOne n
+```
+
+(Simons and de Weger excluded all `m ≤ 68` with Baker's theorem; for `m = 1` the integrality of
+the circuit equation gives the larger bound above, which does not carry over to `m ≥ 2`.)
 
 ### Density and stopping times
 
@@ -189,6 +207,7 @@ theorem conjecture_iff_three_mul_Q : Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃
 | `CollatzBig.All` | `n < 2^32` | 6008 (`Res*`, `Cyc*`) | `descends_below`, `cycle_length_ge` (205078) |
 | `CollatzBig.Ext` | `n < 434·2^24` | +4255 (`Ext*`, `ExtCyc*`) | `descends_below`, `cycle_length_ge` (492531), `stopsBy_iff_goodSet` |
 | `CollatzBig.Circuit` | — | `CircuitCert` | `no_circuit` |
+| `CollatzBig.MCycle` | — | `MCycleCert` | `reachesOne_of_blocks_le_13` … `_469` |
 
 Chunk theorems are `kallFrom (resCheck 24 256 1000) lo len = true` and similar, proved by
 `decide +kernel` (the kernel has GMP-accelerated `Nat`). Chunk modules import only the Mathlib-free
@@ -204,7 +223,7 @@ lake build Collatz
 scripts/distributed/run.sh WORKDIR local:16 otherhost:16      # compile chunks with lean -o
 scripts/distributed/watch.sh WORKDIR                          # completion, failures, dead workers, stalls
 scripts/assemble_big.sh                                       # All, Bridge, CoeffStop, Audit
-scripts/assemble_ext.sh                                       # Ext, ExtAudit, CircuitCert, Circuit, CircuitAudit
+scripts/assemble_ext.sh                                       # Ext, Circuit, MCycle and their audits
 ```
 
 The last clean rebuild (all 10263 chunks from `git archive`, about 92 CPU-hours on three machines,
@@ -216,7 +235,7 @@ then assembled and audited) is documented in [`CollatzBig/PROVENANCE.md`](Collat
 | --- | --- |
 | `Collatz/Basic.lean`, `Descent.lean`, `Residue.lean`, `Verify.lean`, `Main.lean` | Definitions, reduction to descent, residue certificates, `n < 1024` |
 | `Collatz/Defs.lean`, `Kernel.lean`, `ExtDefs.lean`, `ExtKernel.lean`, `CoeffStopDefs.lean` | Mathlib-free kernel checkers and their soundness |
-| `Collatz/Cycle.lean`, `CycleBound.lean`, `NatCycles.lean`, `Circuit.lean` | Cycle constraints |
+| `Collatz/Cycle.lean`, `CycleBound.lean`, `NatCycles.lean`, `Circuit.lean`, `MCycle.lean` | Cycle constraints |
 | `Collatz/Terras.lean`, `Korec.lean`, `StoppingTime.lean`, `StoppingDist.lean`, `TerrasD.lean`, `CoeffStop.lean` | Density and stopping times |
 | `Collatz/Crandall.lean`, `Krasikov.lean`, `LongStop.lean` | Integers reaching 1, long trajectories |
 | `Collatz/Lagarias.lean`, `TwoAdic.lean`, `Periodic.lean`, `Haar.lean`, `Ergodic.lean`, `Mixing.lean`, `Bernoulli.lean`, `LLN.lean`, `CLT.lean`, `Equidist.lean`, `Bernstein.lean` | The 2-adic map |

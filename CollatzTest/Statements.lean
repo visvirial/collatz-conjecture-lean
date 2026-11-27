@@ -58,6 +58,9 @@ example {n k l : ℕ} (hc : IsCircuit n k l) (hk : k < 1636) : n = 1 ∧ k = 1 �
 
 /-! More headline statements. -/
 
+example {n K : ℕ} (hn : 1 ≤ n) (hK : 1 ≤ K) (hper : kstepT^[K] n = n) (hm : oddBlocks K n ≤ 3)
+    (hk : oddCount K n < 306) : ReachesOne n := reachesOne_of_mcycle_three hn hK hper hm hk
+
 example (k : ℕ) :
     Function.Bijective (fun r : Fin (2 ^ k) => fun i : Fin k => decide (kstepT^[i] r % 2 = 1)) :=
   parity_bijective k

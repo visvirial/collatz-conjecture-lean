@@ -26,6 +26,7 @@ import Collatz.Equidist
 import Collatz.Bernstein
 import Collatz.NatCycles
 import Collatz.Circuit
+import Collatz.MCycle
 import Collatz.Crandall
 import Collatz.Krasikov
 import Collatz.CoeffStopDefs

@@ -11,7 +11,7 @@ for f in CollatzBig/Ext[0-9]*.lean CollatzBig/ExtCyc*.lean; do
   [ -f "$O/$b.olean" ] && [ "$O/$b.olean" -nt "$f" ] || { echo "missing or stale: $b"; missing=1; }
 done
 [ $missing -eq 0 ] || exit 1
-for m in Ext ExtAudit CircuitCert Circuit CircuitAudit; do
+for m in Ext ExtAudit CircuitCert Circuit CircuitAudit MCycleCert MCycle MCycleAudit; do
   echo "compiling CollatzBig.$m"
   /usr/bin/time -f "  %e s, %M KB" lake env lean -o "$O/$m.olean" "CollatzBig/$m.lean"
 done

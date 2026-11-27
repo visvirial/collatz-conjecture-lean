@@ -83,3 +83,10 @@ rebuilt tree, together with `scripts/assemble_big.sh` and `scripts/assemble_ext.
 sources; `CollatzBig/Audit.lean`, `ExtAudit.lean` and `CircuitAudit.lean` all passed. The kernel
 limits every numeral to 2^30 bits (128 MB), which is why the Farey pair stops at
 `9809721694/6189245291 < log₂ 3 < 630138897/397573379` (see `scripts/circuit_cert.py`).
+
+## Bounded m-cycle theorems (2026-11-27)
+
+`CollatzBig/MCycleCert.lean` (seven Farey-pair certificates, largest numeral about 2.7·10^8 bits;
+5 s, 0.8 GB), `CollatzBig/MCycle.lean` and `CollatzBig/MCycleAudit.lean` were compiled in the same
+tree by `scripts/assemble_ext.sh`, together with the other assemblies, for the current sources;
+all audits passed.
