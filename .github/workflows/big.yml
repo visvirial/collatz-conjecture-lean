@@ -1,0 +1,99 @@
+name: CollatzBig (full re-verification)
+
+# Recompiles every CollatzBig chunk from source with `lean -o` (the kernel re-checks every
+# `decide +kernel` proof), then assembles All, Bridge, CoeffStop, Ext, Circuit, MCycle and runs
+# their axiom audits. About 90 CPU-hours, so it runs on demand and when the verification changes.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "CollatzBig/**"
+      - "Collatz/Defs.lean"
+      - "Collatz/ExtDefs.lean"
+      - "Collatz/CoeffStopDefs.lean"
+      - "scripts/assemble_*.sh"
+      - ".github/workflows/big.yml"
+
+env:
+  SHARDS: 200
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.s.outputs.shards }}
+    steps:
+      - id: s
+        run: echo "shards=$(jq -nc "[range($SHARDS)]")" >> "$GITHUB_OUTPUT"
+
+  chunks:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain "$(cat lean-toolchain)"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Compile the Mathlib-free definitions
+        run: |
+          mkdir -p build/Collatz build/CollatzBig
+          export LEAN_PATH=$PWD/build
+          for m in Defs ExtDefs CoeffStopDefs; do
+            lean -DautoImplicit=false -o build/Collatz/$m.olean Collatz/$m.lean
+          done
+      - name: Compile chunks of this shard
+        run: |
+          export LEAN_PATH=$PWD/build
+          ls CollatzBig | grep -E '^(Res|Cyc|Cst|Ext[0-9]|ExtCyc)[0-9A-Za-z]*\.lean$' | sort \
+            | awk -v n="$SHARDS" -v s="${{ matrix.shard }}" 'NR % n == s' > mine.txt
+          echo "$(wc -l < mine.txt) chunks"
+          xargs -P 3 -I{} sh -c '
+            b=$(basename {} .lean)
+            /usr/bin/time -f "$b %e s %M KB" lean -o build/CollatzBig/$b.olean CollatzBig/{}
+          ' < mine.txt
+          for f in $(cat mine.txt); do test -s build/CollatzBig/${f%.lean}.olean; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chunks-${{ matrix.shard }}
+          path: build/CollatzBig/*.olean
+          retention-days: 7
+
+  assemble:
+    needs: chunks
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lean
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain "$(cat lean-toolchain)"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Build the Collatz library
+        run: |
+          lake exe cache get
+          lake build Collatz
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: chunks-*
+          merge-multiple: true
+          path: .lake/build/lib/lean/CollatzBig
+      - name: Check that every chunk was compiled
+        run: |
+          n_src=$(ls CollatzBig | grep -cE '^(Res|Cyc|Cst|Ext[0-9]|ExtCyc)[0-9A-Za-z]*\.lean$')
+          n_obj=$(ls .lake/build/lib/lean/CollatzBig/*.olean | wc -l)
+          echo "sources $n_src, oleans $n_obj"
+          test "$n_src" -eq "$n_obj"
+      - name: Assemble the 2^32 verification and audit its axioms
+        run: scripts/assemble_big.sh
+      - name: Assemble the extension, circuits and m-cycles and audit their axioms
+        run: scripts/assemble_ext.sh
