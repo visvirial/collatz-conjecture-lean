@@ -11,7 +11,7 @@ preserves `μ` as soon as preimages of balls have the right measure. This holds 
 * isometric bijections (`measurePreserving_isometryEquiv`), in particular `Q`;
 * the shift, whose preimage of a ball of radius `2^-k` is two balls of radius `2^-(k+1)`.
 
-Since `T = Q⁻¹ ∘ shift ∘ Q`, `T` preserves `μ` (`T_measurePreserving`) (Lagarias 1985).
+Since `T = Q⁻¹ ∘ shift ∘ Q`, `T` preserves `μ` (`T_measurePreserving`) (Matthews and Watts 1984; Lagarias 1985).
 -/
 
 namespace Collatz.TwoAdic
@@ -218,7 +218,7 @@ theorem shift_measurePreserving : MeasurePreserving shift μ μ := by
     ENNReal.mul_inv (Or.inr (by norm_num)) (Or.inr (by norm_num)), ← two_mul, ← mul_assoc,
     mul_right_comm, ENNReal.mul_inv_cancel (by norm_num) (by norm_num), one_mul]
 
-/-- **Lagarias**: the 2-adic 3x+1 map preserves Haar measure. -/
+/-- The 2-adic 3x+1 map preserves Haar measure (Matthews and Watts 1984; Lagarias 1985). -/
 theorem T_measurePreserving : MeasurePreserving T μ μ := by
   have hT : T = Qequiv.symm ∘ shift ∘ Qequiv := by
     funext x

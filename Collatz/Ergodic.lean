@@ -9,7 +9,7 @@ on balls, since `B ∩ shift^[k] ⁻¹' closedBall c (2^-l) = closedBall (d + 2^
 
 If `shift ⁻¹' S = S` then `shift^[k] ⁻¹' S = S`, so `μ (S ∩ B) = μ S μ B` for every ball `B`,
 hence `μ.restrict S = μ S • μ` and `μ S = μ S ^ 2`. So the shift is ergodic, and by the
-conjugacy `Q` so is `T` (Lagarias 1985).
+conjugacy `Q` so is `T` (Matthews and Watts 1984; Lagarias 1985).
 -/
 
 namespace Collatz.TwoAdic
@@ -110,7 +110,8 @@ theorem shift_ergodic : Ergodic shift μ := by
     have : μ Sᶜ = 0 := (prob_compl_eq_zero_iff hS).2 h1
     simpa [compl_def] using this
 
-/-- **Lagarias**: the 2-adic 3x+1 map `T` is ergodic for Haar measure. -/
+/-- The 2-adic 3x+1 map `T` is ergodic for Haar measure (Matthews and Watts 1984;
+Lagarias 1985). -/
 theorem T_ergodic : Ergodic T μ := by
   refine (measurePreserving_isometryEquiv Qequiv.symm).ergodic_of_ergodic_semiconj shift_ergodic
     T_measurePreserving.measurable (fun y => ?_)

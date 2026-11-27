@@ -16,9 +16,9 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Verify.lean` | Kernel-checked descent of every `2 ≤ n < 1024` |
 | `Collatz/Main.lean` | Main reduction theorem |
 | `Collatz/Cycle.lean` | Constraints on nontrivial cycles |
-| `Collatz/Kernel.lean` | Kernel-friendly checkers (`resCheck`, `kall`, ...) with soundness proofs |
+| `Collatz/Defs.lean` | Mathlib-free definitions evaluated by the kernel (`resCheck`, `kall`, `cycCheck2`, ...) |
+| `Collatz/Kernel.lean` | Soundness proofs of the kernel checkers |
 | `Collatz/CycleBound.lean` | Cheap cycle exponent check via rational bounds on `log₂ 3` |
-| `Collatz/Defs.lean` | Mathlib-free computational definitions evaluated by the kernel |
 | `Collatz/Terras.lean` | Parity vector bijection and Terras' density theorem |
 | `Collatz/Korec.lean` | Density form of Terras' theorem; Korec's theorem |
 | `Collatz/Lagarias.lean` | The 3x+1 conjugacy map at every finite level |
@@ -30,7 +30,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Bernoulli.lean` | `T` on `ℤ_[2]` is isomorphic to the Bernoulli shift |
 | `Collatz/LLN.lean` | Strong law of large numbers for the parities on `ℤ_[2]` |
 | `Collatz/NatCycles.lean` | Integer periodic points of the 2-adic map are Collatz cycles |
-| `Collatz/Crandall.lean` | At least `N^0.155` integers `≤ N` reach `1` |
+| `Collatz/Crandall.lean` | `N^c ≤ 2 #{n ≤ N reaching 1}` with `c = log 2 / log 86 ≈ 0.156` |
 | `Collatz/Krasikov.lean` | At least `κ N^(3/7)` integers `≤ N` reach `1` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
@@ -120,9 +120,10 @@ theorem periodic_rational {p : ℕ} (hp : 1 ≤ p) {x : ℤ_[2]} (hx : T^[p] x =
     ∃ a b : ℤ, Odd b ∧ (b : ℤ_[2]) * x = a
 ```
 
-A positive integer among them that does not reach `1` is a Collatz cycle of length `≤ 2p`
-(`Collatz/NatCycles.lean`), so its period is at least `53`, and at least `102539` with the
-2^32 bound (`CollatzBig/Bridge.lean`, compiled with `lean -o` after `CollatzBig.All`).
+A positive integer among them that does not reach `1` gives a Collatz cycle whose number of
+even steps is exactly `p` (`Collatz/NatCycles.lean`: `card_evens_kstepT`), so its period is at
+least `65`, and at least `125743` with the 2^32 bound (`CollatzBig/Bridge.lean`). In this
+accelerated convention, used e.g. by Eliahou (1993), the cycle bound below reads `125743`.
 
 `Collatz/Haar.lean` equips `ℤ_[2]` with its Haar probability measure `μ`
 (`μ (closedBall a (2^-k)) = 2^-k`) and shows that `T` preserves it:
@@ -223,18 +224,24 @@ workers it took about 2 hours. Chunk modules only import `Collatz.Defs` (no Math
 they can be compiled independently with `lean -o` on several machines:
 
 ```sh
-gcc -O2 -o plan scripts/plan.c && ./plan 24 256 > plan.txt
-python3 scripts/gen_big.py 24 256 1000 6000 8 plan.txt
-lake build CollatzBig
+gcc -O2 -o plan scripts/plan.c && ./plan 24 256 > plan.txt   # regenerates the chunk files
+python3 scripts/gen_big.py 24 256 1000 6000 8 plan.txt        # (byte-identical to the committed ones)
+lake build Collatz
+scripts/distributed/run.sh WORKDIR local:8 host:24            # compile the 6008 chunks (lean -o)
+scripts/distributed/watch.sh WORKDIR                          # completion, failures, dead workers, stalls
+scripts/assemble_big.sh                                       # All, Bridge, and the axiom audit Audit.lean
 ```
 
-`scripts/distributed/` compiles the chunk modules in parallel on several machines over ssh
-(`run.sh WORKDIR local:8 host:24`), with `watch.sh` reporting completion, failures, dead
-workers and stalls.
+`CollatzBig` is deliberately not a Lake target: `lake build` would recompile all chunks
+(about 4.5 GB of memory each). `CollatzBig/PROVENANCE.md` records the last clean rebuild.
 
 ## Build
 
 ```sh
 lake exe cache get
-lake build
+lake build      # the Collatz library
+lake test       # CollatzTest: axiom audit of every Collatz.* declaration, headline statements
 ```
+
+`lake test` fails if any declaration depends on an axiom other than `propext`,
+`Classical.choice` and `Quot.sound`; CI runs both.

@@ -12,7 +12,8 @@ For the accelerated map `T`, `n` has stopping time `≤ k` if `T^j n < n` for so
 * `density_stopsBy`: the set of `n` with stopping time `≤ k` has natural density exactly
   `#(goodSet k) / 2^k`, e.g. `1/2, 3/4, 3/4, 13/16` for `k = 1, 2, 3, 4`.
 
-As `k → ∞` these densities tend to `1` (Terras' theorem, `density_not_descends`).
+As `k → ∞` the proportion `#(goodSet k) / 2^k` tends to `1`: its complement lies in `badSet k`,
+whose proportion is at most `(121/128)^j` for `k = 2j` (`badSet_card`).
 -/
 
 namespace Collatz

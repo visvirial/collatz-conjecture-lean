@@ -9,8 +9,8 @@ import Collatz.TwoAdic
 * `periodic_rational`: every such point is a rational number with odd denominator:
   `(2^p - 3^s) x = c` for some natural `c`, where `s` is the number of odd steps.
 
-In particular every cycle of the Collatz map on the positive integers is among these
-`2^p` rational points.
+In particular every positive integer `n` with `kstepT^[p] n = n` is one of these `2^p`
+rational points (see `Collatz.NatCycles`).
 -/
 
 namespace Collatz.TwoAdic

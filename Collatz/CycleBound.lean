@@ -3,8 +3,8 @@ import Collatz.Kernel
 /-!
 # Cheap cycle exponent checks via rational bounds on `log₂ 3`
 
-`cycleCheck` compares huge integers for every `b`, which is too slow for large `b`.
-Here we instead use the rational bounds
+Comparing the huge integers `N^b 2^a` and `(3N+1)^b` directly is too slow for large `b`.
+Instead we use the rational bounds
 
   `176251 / 111202 < log₂ 3 < 301994 / 190537`
 

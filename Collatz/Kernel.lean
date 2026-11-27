@@ -8,7 +8,8 @@ them efficiently (the kernel has GMP-accelerated `Nat` literals). Each checker i
 sound, so large verifications can be split into many small kernel-checked chunk theorems.
 
 * `resCheck k M fuel r`: residue `r` mod `2^k` is fine for all `n = 2^k m + r`, `m < M`.
-* `cycleCheck N b`: no cycle with `b` odd steps has all odd elements `≥ N`.
+* `kdesc`, `kall`, `kallFrom`: the building blocks, with `kallFrom_append` for chunking.
+  (The cycle check `cycCheck2` is in `Collatz.CycleBound`.)
 -/
 
 namespace Collatz
@@ -100,46 +101,5 @@ lemma kall_of_kallFrom {f : ℕ → Bool} {n : ℕ} (h : kallFrom f 0 n = true) 
 lemma kall_of_kallFrom_zero {f : ℕ → Bool} {n : ℕ} (h : kallFrom f 0 n = true) :
     kall f n = true := by
   simpa [kallFrom] using h
-
-/-! ## Cycles -/
-
-/-- No cycle with `b` odd steps whose odd elements are all `≥ N`: the smallest admissible
-`a = log2 (3^b) + 1` already violates the upper bound. -/
-def cycleCheck (N b : ℕ) : Bool :=
-  b == 0 || !(Nat.ble (N ^ b * 2 ^ (Nat.log2 (3 ^ b) + 1)) ((3 * N + 1) ^ b))
-
-lemma log2_lt_of_lt_two_pow {x a : ℕ} (hx : 1 ≤ x) (h : x < 2 ^ a) : Nat.log2 x < a :=
-  (Nat.log2_lt (by omega)).2 h
-
-theorem odds_card_ge_of_check {n p N B : ℕ} (hc : IsCycle n p) (hnr : ¬ ReachesOne n)
-    (hsmall : ∀ y, 1 ≤ y → y < N → ReachesOne y)
-    (hchk : kall (cycleCheck N) B = true) : B ≤ (odds n p).card := by
-  have hm : ∀ i ∈ odds n p, N ≤ step^[i] n := by
-    intro i _
-    by_contra hlt
-    exact not_reachesOne_iterate hnr i (hsmall _ (iterate_pos hc.1 i) (by omega))
-  have hup := two_pow_le hc hm
-  have hlow := three_pow_lt_two_pow hc
-  by_contra hb
-  have h1 := kall_spec hchk _ (by omega : (odds n p).card < B)
-  unfold cycleCheck at h1
-  rw [Bool.or_eq_true, beq_iff_eq, Bool.not_eq_true'] at h1
-  rcases h1 with h0 | h1
-  · exact absurd h0 (Nat.pos_iff_ne_zero.1 (Finset.card_pos.2 (odds_nonempty hc)))
-  · have hnle : ¬ (N ^ (odds n p).card * 2 ^ (Nat.log2 (3 ^ (odds n p).card) + 1)
-        ≤ (3 * N + 1) ^ (odds n p).card) := by
-      rw [← Nat.ble_eq]; simp [h1]
-    have ha : Nat.log2 (3 ^ (odds n p).card) + 1 ≤ (evens n p).card :=
-      log2_lt_of_lt_two_pow (Nat.one_le_pow _ _ (by norm_num)) hlow
-    have : N ^ (odds n p).card * 2 ^ (Nat.log2 (3 ^ (odds n p).card) + 1)
-        ≤ N ^ (odds n p).card * 2 ^ (evens n p).card :=
-      Nat.mul_le_mul_left _ (Nat.pow_le_pow_right (by norm_num) ha)
-    omega
-
-theorem evens_card_ge_of_odds {n p B : ℕ} (hc : IsCycle n p) (hB : B ≤ (odds n p).card) :
-    Nat.log2 (3 ^ B) + 1 ≤ (evens n p).card := by
-  have h1 : 3 ^ B ≤ 3 ^ (odds n p).card := Nat.pow_le_pow_right (by norm_num) hB
-  exact log2_lt_of_lt_two_pow (Nat.one_le_pow _ _ (by norm_num))
-    (lt_of_le_of_lt h1 (three_pow_lt_two_pow hc))
 
 end Collatz

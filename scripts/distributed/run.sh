@@ -3,7 +3,7 @@
 # Compile every chunk module CollatzBig/{Res,Cyc}*.lean in parallel, e.g.
 #   scripts/distributed/run.sh /tmp/big local:8 buildhost:24
 # Remote hosts need a copy of the project (rsync without .lake) with `lake build Collatz.Defs`.
-# Afterwards copy the remote CollatzBig/*.olean back and run `lake build CollatzBig`.
+# Afterwards copy the remote CollatzBig/*.olean back and run scripts/assemble_big.sh.
 set -e
 W=$1; shift
 D=$(cd "$(dirname "$0")" && pwd)

@@ -3,7 +3,8 @@ import Collatz.Crandall
 /-!
 # At least `N^(3/7)` integers up to `N` reach 1 (Krasikov's exponent)
 
-Let `U n = oddPart (3n + 1)` and let `D m x` be the odd `n ≤ x` with `U^j n = m` for some `j`.
+Let `U n = oddPart (3n + 1)` (the Syracuse map) and let `D m x` be the odd `n ≤ x` with
+`U^j n = m` for some `j`, i.e. the backward tree of `m` cut at `x`.
 For odd `m` with `3 ∤ m` and `m` not periodic under `U`, the children `(2^a m - 1)/3`
 (`2 ≤ a ≤ 30`, prime to `3`) have pairwise disjoint sets `D (child) x` inside `D m x`.
 
@@ -59,7 +60,7 @@ lemma exists_eq_pow_mul_oddPart : ∀ n : ℕ, 0 < n → ∃ v, n = 2 ^ v * oddP
 termination_by n => n
 decreasing_by omega
 
-/-- The backward map on odd numbers: `n ↦ oddPart (3n + 1)`. -/
+/-- The forward map on odd numbers (Syracuse map): `n ↦ oddPart (3n + 1)`. -/
 def U (n : ℕ) : ℕ := oddPart (3 * n + 1)
 
 lemma U_odd (n : ℕ) : U n % 2 = 1 := by
@@ -110,7 +111,7 @@ lemma NP_ne_one {m : ℕ} (hm : NP m) : m ≠ 1 := by
 /-! ## The sets `D m x` -/
 
 open Classical in
-/-- Odd `n ≤ x` whose backward orbit hits `m`. -/
+/-- Odd `n ≤ x` whose forward `U`-orbit hits `m` (the backward tree of `m`, cut at `x`). -/
 noncomputable def D (m x : ℕ) : Finset ℕ :=
   (range (x + 1)).filter (fun n => n % 2 = 1 ∧ ∃ j, U^[j] n = m)
 

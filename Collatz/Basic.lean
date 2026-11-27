@@ -40,7 +40,7 @@ lemma iterate_pos {n : ℕ} (hn : 1 ≤ n) (k : ℕ) : 1 ≤ step^[k] n := by
 
 lemma step_one : step 1 = 4 := rfl
 
-/-- Once at `1`, the orbit cycles `1 → 4 → 2 → 1`. -/
+/-- `1` reaches `1` (after zero steps). -/
 lemma reachesOne_one : ReachesOne 1 := ⟨0, rfl⟩
 
 lemma ReachesOne.of_iterate {n k : ℕ} (h : ReachesOne (step^[k] n)) : ReachesOne n := by

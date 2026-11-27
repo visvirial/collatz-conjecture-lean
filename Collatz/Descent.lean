@@ -9,8 +9,8 @@ This is the standard reduction behind "stopping time" arguments (Terras, Everett
 
 namespace Collatz
 
-/-- If every `n` in `[2, N]` descends... more generally: if every `n ≥ 2` in some range
-descends, strong induction gives `ReachesOne`. This is the core induction. -/
+/-- If every `n` with `2 ≤ n ≤ N` descends, then every `n` with `1 ≤ n ≤ N` reaches `1`
+(strong induction). -/
 theorem reachesOne_of_descends_below (N : ℕ)
     (h : ∀ n, 2 ≤ n → n ≤ N → Descends n) : ∀ n, 1 ≤ n → n ≤ N → ReachesOne n := by
   intro n
