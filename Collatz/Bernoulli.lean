@@ -1,5 +1,4 @@
 import Collatz.Ergodic
-import Mathlib.Probability.ProductMeasure
 
 /-!
 # The 2-adic 3x+1 map is a Bernoulli shift

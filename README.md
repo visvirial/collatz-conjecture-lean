@@ -28,6 +28,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Haar.lean` | `T` on `ℤ_[2]` preserves Haar measure |
 | `Collatz/Ergodic.lean` | `T` on `ℤ_[2]` is ergodic |
 | `Collatz/Bernoulli.lean` | `T` on `ℤ_[2]` is isomorphic to the Bernoulli shift |
+| `Collatz/LLN.lean` | Strong law of large numbers for the parities on `ℤ_[2]` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -144,6 +145,18 @@ sequence `paritySeq x = fun i => (T^i x is odd)` is a measure-preserving bijecti
 theorem paritySeq_measurePreserving : MeasurePreserving paritySeq μ bernoulli
 theorem paritySeq_bijective : Function.Bijective paritySeq
 theorem paritySeq_T (x : ℤ_[2]) : paritySeq (T x) = fun i => paritySeq x (i + 1)
+```
+
+`Collatz/LLN.lean` applies Mathlib's strong law of large numbers to these coins: for
+Haar-almost every `x`, half of the points along the orbit are odd, so the multiplier of `T^n`
+decays like `(√3 / 2)^n`:
+
+```lean
+theorem odd_fraction_ae :
+    ∀ᵐ x ∂μ, Tendsto (fun n => (oddCount2 n x : ℝ) / n) atTop (𝓝 (1 / 2))
+theorem multiplier_rate_ae :
+    ∀ᵐ x ∂μ, Tendsto (fun n => Real.log (3 ^ oddCount2 n x / 2 ^ n) / n) atTop
+      (𝓝 (Real.log 3 / 2 - Real.log 2))
 ```
 
 ## Stopping times (`Collatz/StoppingTime.lean`)

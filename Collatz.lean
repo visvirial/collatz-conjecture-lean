@@ -16,3 +16,4 @@ import Collatz.StoppingTime
 import Collatz.Haar
 import Collatz.Ergodic
 import Collatz.Bernoulli
+import Collatz.LLN
