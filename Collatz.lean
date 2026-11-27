@@ -40,3 +40,4 @@ import Collatz.CoeffStop
 import Collatz.ExtDefs
 import Collatz.ExtKernel
 import Collatz.RozierTerracolParadox
+import Collatz.TaoSyracuseValuation
