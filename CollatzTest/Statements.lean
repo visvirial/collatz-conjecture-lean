@@ -8,6 +8,7 @@ the Lean statements. Each `example` is closed by the named theorem.
 -/
 
 open Collatz Finset
+open scoped Collatz.TwoAdic
 
 example : Conjecture ↔ ∀ n, 2 ^ 10 ≤ n → n % 2 ^ 10 ∈ survivors 10 → Descends n :=
   conjecture_iff_survivors_descend

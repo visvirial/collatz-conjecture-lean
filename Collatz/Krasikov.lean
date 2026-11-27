@@ -3,18 +3,18 @@ import Collatz.Crandall
 /-!
 # At least `N^(3/7)` integers up to `N` reach 1 (Krasikov's exponent)
 
-Let `U n = oddPart (3n + 1)` (the Syracuse map) and let `D m x` be the odd `n ≤ x` with
-`U^j n = m` for some `j`, i.e. the backward tree of `m` cut at `x`.
-For odd `m` with `3 ∤ m` and `m` not periodic under `U`, the children `(2^a m - 1)/3`
-(`2 ≤ a ≤ 30`, prime to `3`) have pairwise disjoint sets `D (child) x` inside `D m x`.
+Let `syracuse n = oddPart (3n + 1)` (the Syracuse map) and let `backTree m x` be the odd `n ≤ x` with
+`syracuse^j n = m` for some `j`, i.e. the backward tree of `m` cut at `x`.
+For odd `m` with `3 ∤ m` and `m` not periodic under `syracuse`, the children `(2^a m - 1)/3`
+(`2 ≤ a ≤ 30`, prime to `3`) have pairwise disjoint sets `backTree (child) x` inside `backTree m x`.
 
 With constants `C r` for the residues `r` mod `27` we prove, by induction on `x - m`,
 
-  `C (m % 27) (x / m)^(3/7) ≤ 10^6 (2^30)^(3/7) #D m x`.
+  `C (m % 27) (x / m)^(3/7) ≤ 10^6 (2^30)^(3/7) #backTree m x`.
 
 The induction step needs, for every residue `s` mod `81`,
 `∑_a C (child % 27) (3 / 2^a)^(3/7) ≥ C (s % 27)`, which is certified by `decide +kernel` from
-the rational bounds `(3/2^a)^(3/7) ≥ (G/D) (p/q)^a` (checked through seventh powers).
+the rational bounds `(3/2^a)^(3/7) ≥ (G/backTree) (p/q)^a` (checked through seventh powers).
 Krasikov (1989) obtained the exponent `3/7` from inequalities of this kind.
 -/
 
@@ -61,79 +61,79 @@ termination_by n => n
 decreasing_by omega
 
 /-- The forward map on odd numbers (Syracuse map): `n ↦ oddPart (3n + 1)`. -/
-def U (n : ℕ) : ℕ := oddPart (3 * n + 1)
+def syracuse (n : ℕ) : ℕ := oddPart (3 * n + 1)
 
-lemma U_odd (n : ℕ) : U n % 2 = 1 := by
+lemma syracuse_odd (n : ℕ) : syracuse n % 2 = 1 := by
   obtain ⟨_, _, h⟩ := exists_eq_pow_mul_oddPart (3 * n + 1) (by omega); exact h
 
-lemma U_of_eq {k a m : ℕ} (h : 3 * k + 1 = 2 ^ a * m) (hm : m % 2 = 1) : U k = m := by
-  rw [U, h, oddPart_pow_mul hm]
+lemma syracuse_of_eq {k a m : ℕ} (h : 3 * k + 1 = 2 ^ a * m) (hm : m % 2 = 1) : syracuse k = m := by
+  rw [syracuse, h, oddPart_pow_mul hm]
 
-lemma reachesOne_of_U {n : ℕ} (hn : n % 2 = 1) (h : ReachesOne (U n)) : ReachesOne n := by
+lemma reachesOne_of_syracuse {n : ℕ} (hn : n % 2 = 1) (h : ReachesOne (syracuse n)) : ReachesOne n := by
   obtain ⟨v, hv, -⟩ := exists_eq_pow_mul_oddPart (3 * n + 1) (by omega)
   apply ReachesOne.of_step
   rw [step_odd hn, hv]
   exact h.pow_mul v
 
-lemma reachesOne_of_U_iterate {m : ℕ} (hm : ReachesOne m) :
-    ∀ j n, n % 2 = 1 → U^[j] n = m → ReachesOne n
+lemma reachesOne_of_syracuse_iterate {m : ℕ} (hm : ReachesOne m) :
+    ∀ j n, n % 2 = 1 → syracuse^[j] n = m → ReachesOne n
   | 0, n, _, h => by rw [Function.iterate_zero_apply] at h; rw [h]; exact hm
   | j + 1, n, hn, h => by
     rw [Function.iterate_succ_apply] at h
-    exact reachesOne_of_U hn (reachesOne_of_U_iterate hm j (U n) (U_odd n) h)
+    exact reachesOne_of_syracuse hn (reachesOne_of_syracuse_iterate hm j (syracuse n) (syracuse_odd n) h)
 
-/-- `m` is not periodic under `U`. -/
-def NP (m : ℕ) : Prop := ∀ j, 1 ≤ j → U^[j] m ≠ m
+/-- `m` is not periodic under `syracuse`. -/
+def notSyracusePeriodic (m : ℕ) : Prop := ∀ j, 1 ≤ j → syracuse^[j] m ≠ m
 
-lemma U_iterate_comm (j n : ℕ) : U^[j] (U n) = U (U^[j] n) := by
-  rw [← Function.iterate_succ_apply U j n, Function.iterate_succ_apply' U j n]
+lemma syracuse_iterate_comm (j n : ℕ) : syracuse^[j] (syracuse n) = syracuse (syracuse^[j] n) := by
+  rw [← Function.iterate_succ_apply syracuse j n, Function.iterate_succ_apply' syracuse j n]
 
-lemma NP_of_U {m c : ℕ} (hm : NP m) (hc : U c = m) : NP c := by
+lemma notSyracusePeriodic_of_syracuse {m c : ℕ} (hm : notSyracusePeriodic m) (hc : syracuse c = m) : notSyracusePeriodic c := by
   intro j hj h
   apply hm j hj
-  rw [← hc, U_iterate_comm, h]
+  rw [← hc, syracuse_iterate_comm, h]
 
-lemma U_one : U 1 = 1 := by
-  rw [U, show 3 * 1 + 1 = 2 ^ 2 * 1 by norm_num, oddPart_pow_mul (by norm_num)]
+lemma syracuse_one : syracuse 1 = 1 := by
+  rw [syracuse, show 3 * 1 + 1 = 2 ^ 2 * 1 by norm_num, oddPart_pow_mul (by norm_num)]
 
-lemma NP_five : NP 5 := by
-  have h5 : U 5 = 1 := by
-    rw [U, show 3 * 5 + 1 = 2 ^ 4 * 1 by norm_num, oddPart_pow_mul (by norm_num)]
-  have h1 : ∀ j, U^[j] 1 = 1 := fun j => Function.iterate_fixed U_one j
+lemma notSyracusePeriodic_five : notSyracusePeriodic 5 := by
+  have h5 : syracuse 5 = 1 := by
+    rw [syracuse, show 3 * 5 + 1 = 2 ^ 4 * 1 by norm_num, oddPart_pow_mul (by norm_num)]
+  have h1 : ∀ j, syracuse^[j] 1 = 1 := fun j => Function.iterate_fixed syracuse_one j
   intro j hj
   obtain ⟨i, rfl⟩ : ∃ i, j = i + 1 := ⟨j - 1, by omega⟩
   rw [Function.iterate_succ_apply, h5, h1]
   omega
 
-lemma NP_ne_one {m : ℕ} (hm : NP m) : m ≠ 1 := by
-  rintro rfl; exact hm 1 le_rfl (by simpa using U_one)
+lemma notSyracusePeriodic.ne_one {m : ℕ} (hm : notSyracusePeriodic m) : m ≠ 1 := by
+  rintro rfl; exact hm 1 le_rfl (by simpa using syracuse_one)
 
-/-! ## The sets `D m x` -/
+/-! ## The sets `backTree m x` -/
 
 open Classical in
-/-- Odd `n ≤ x` whose forward `U`-orbit hits `m` (the backward tree of `m`, cut at `x`). -/
-noncomputable def D (m x : ℕ) : Finset ℕ :=
-  (range (x + 1)).filter (fun n => n % 2 = 1 ∧ ∃ j, U^[j] n = m)
+/-- Odd `n ≤ x` whose forward `syracuse`-orbit hits `m` (the backward tree of `m`, cut at `x`). -/
+noncomputable def backTree (m x : ℕ) : Finset ℕ :=
+  (range (x + 1)).filter (fun n => n % 2 = 1 ∧ ∃ j, syracuse^[j] n = m)
 
-lemma mem_D {m x n : ℕ} : n ∈ D m x ↔ n ≤ x ∧ n % 2 = 1 ∧ ∃ j, U^[j] n = m := by
+lemma mem_backTree {m x n : ℕ} : n ∈ backTree m x ↔ n ≤ x ∧ n % 2 = 1 ∧ ∃ j, syracuse^[j] n = m := by
   classical
-  simp [D]
+  simp [backTree]
 
-lemma D_subset {m c x : ℕ} (hc : U c = m) : D c x ⊆ D m x := by
+lemma backTree_subset {m c x : ℕ} (hc : syracuse c = m) : backTree c x ⊆ backTree m x := by
   intro n hn
-  rw [mem_D] at hn ⊢
+  rw [mem_backTree] at hn ⊢
   obtain ⟨h1, h2, j, hj⟩ := hn
   exact ⟨h1, h2, j + 1, by rw [Function.iterate_succ_apply', hj, hc]⟩
 
-lemma D_disjoint {m c c' x : ℕ} (hm : NP m) (hc : U c = m) (hc' : U c' = m) (hne : c ≠ c') :
-    Disjoint (D c x) (D c' x) := by
+lemma backTree_disjoint {m c c' x : ℕ} (hm : notSyracusePeriodic m) (hc : syracuse c = m) (hc' : syracuse c' = m) (hne : c ≠ c') :
+    Disjoint (backTree c x) (backTree c' x) := by
   rw [Finset.disjoint_left]
   intro n hn hn'
-  rw [mem_D] at hn hn'
+  rw [mem_backTree] at hn hn'
   obtain ⟨-, -, j, hj⟩ := hn
   obtain ⟨-, -, j', hj'⟩ := hn'
   -- WLOG j ≤ j'
-  have key : ∀ {c c' j j'}, U c = m → U c' = m → c ≠ c' → U^[j] n = c → U^[j'] n = c' →
+  have key : ∀ {c c' j j'}, syracuse c = m → syracuse c' = m → c ≠ c' → syracuse^[j] n = c → syracuse^[j'] n = c' →
       j ≤ j' → False := by
     intro c c' j j' hc hc' hne hj hj' hle
     obtain ⟨k, rfl⟩ : ∃ k, j' = k + j := ⟨j' - j, by omega⟩
@@ -141,19 +141,19 @@ lemma D_disjoint {m c c' x : ℕ} (hm : NP m) (hc : U c = m) (hc' : U c' = m) (h
     rcases Nat.eq_zero_or_pos k with rfl | hk
     · exact hne (by simpa using hj')
     · apply hm k hk
-      calc U^[k] m = U^[k] (U c) := by rw [hc]
-        _ = U (U^[k] c) := U_iterate_comm k c
+      calc syracuse^[k] m = syracuse^[k] (syracuse c) := by rw [hc]
+        _ = syracuse (syracuse^[k] c) := syracuse_iterate_comm k c
         _ = m := by rw [hj', hc']
   rcases le_total j j' with h | h
   · exact key hc hc' hne hj hj' h
   · exact key hc' hc (Ne.symm hne) hj' hj h
 
-lemma self_mem_D {m x : ℕ} (hm : m % 2 = 1) (hx : m ≤ x) : m ∈ D m x :=
-  mem_D.2 ⟨hx, hm, 0, rfl⟩
+lemma self_mem_backTree {m x : ℕ} (hm : m % 2 = 1) (hx : m ≤ x) : m ∈ backTree m x :=
+  mem_backTree.2 ⟨hx, hm, 0, rfl⟩
 
-lemma self_not_mem_D {m c x : ℕ} (hm : NP m) (hc : U c = m) : m ∉ D c x := by
+lemma self_not_mem_backTree {m c x : ℕ} (hm : notSyracusePeriodic m) (hc : syracuse c = m) : m ∉ backTree c x := by
   intro h
-  rw [mem_D] at h
+  rw [mem_backTree] at h
   obtain ⟨-, -, j, hj⟩ := h
   apply hm (j + 1) (by omega)
   rw [Function.iterate_succ_apply', hj, hc]
@@ -166,7 +166,7 @@ def KrC : List ℕ := [0, 1000000, 523299, 0, 704383, 476519, 0, 552044, 263008,
 
 def Cc (r : ℕ) : ℕ := KrC.getD r 0
 
-/-- `p/q ≤ 2^(-3/7)` and `G/D ≤ 3^(3/7)`. -/
+/-- `p/q ≤ 2^(-3/7)` and `G/backTree ≤ 3^(3/7)`. -/
 def KrP : ℕ := 742996
 def KrQ : ℕ := 1000000
 def KrG : ℕ := 1601327
@@ -274,28 +274,28 @@ lemma krCert_real {m : ℕ} (hm : m % 3 ≠ 0) :
 
 /-! ## The induction -/
 
-lemma child_props {m a : ℕ} (hm1 : m % 2 = 1) (hNP : NP m) (ha : 2 ≤ a)
+lemma child_props {m a : ℕ} (hm1 : m % 2 = 1) (hNP : notSyracusePeriodic m) (ha : 2 ≤ a)
     (hc : condB m a) :
-    3 * child m a + 1 = 2 ^ a * m ∧ child m a % 2 = 1 ∧ child m a % 3 ≠ 0 ∧ U (child m a) = m ∧
-      NP (child m a) ∧ m < child m a := by
+    3 * child m a + 1 = 2 ^ a * m ∧ child m a % 2 = 1 ∧ child m a % 3 ≠ 0 ∧ syracuse (child m a) = m ∧
+      notSyracusePeriodic (child m a) ∧ m < child m a := by
   have heven : (2 ^ a * m) % 2 = 0 := by
     obtain ⟨b, rfl⟩ : ∃ b, a = b + 1 := ⟨a - 1, by omega⟩
     rw [pow_succ, mul_comm (2 ^ b) 2, mul_assoc]; exact Nat.mul_mod_right 2 _
   unfold condB at hc
   have h3 : 3 * child m a + 1 = 2 ^ a * m := by unfold child; omega
-  have hU : U (child m a) = m := U_of_eq h3 hm1
-  have hm2 : 2 ≤ m := by have := NP_ne_one hNP; omega
+  have hU : syracuse (child m a) = m := syracuse_of_eq h3 hm1
+  have hm2 : 2 ≤ m := by have := notSyracusePeriodic.ne_one hNP; omega
   have h4 : 4 * m ≤ 2 ^ a * m :=
     Nat.mul_le_mul_right m (by simpa using Nat.pow_le_pow_right (by norm_num : 0 < 2) ha)
-  refine ⟨h3, by omega, by unfold child; omega, hU, NP_of_U hNP hU, by omega⟩
+  refine ⟨h3, by omega, by unfold child; omega, hU, notSyracusePeriodic_of_syracuse hNP hU, by omega⟩
 
-/-- `#D m x ≥ ∑ #D (child) x` over the good exponents. -/
-lemma card_D_ge {m x : ℕ} (hm1 : m % 2 = 1) (hNP : NP m) :
-    ∑ a ∈ (range (KrA + 1)).filter (fun a => 2 ≤ a ∧ condB m a), (D (child m a) x).card ≤
-      (D m x).card := by
+/-- `#backTree m x ≥ ∑ #backTree (child) x` over the good exponents. -/
+lemma card_backTree_ge {m x : ℕ} (hm1 : m % 2 = 1) (hNP : notSyracusePeriodic m) :
+    ∑ a ∈ (range (KrA + 1)).filter (fun a => 2 ≤ a ∧ condB m a), (backTree (child m a) x).card ≤
+      (backTree m x).card := by
   classical
   set S := (range (KrA + 1)).filter (fun a => 2 ≤ a ∧ condB m a)
-  have hprops : ∀ a ∈ S, 3 * child m a + 1 = 2 ^ a * m ∧ U (child m a) = m := by
+  have hprops : ∀ a ∈ S, 3 * child m a + 1 = 2 ^ a * m ∧ syracuse (child m a) = m := by
     intro a ha
     simp only [S, mem_filter] at ha
     obtain ⟨h1, -, -, h2, -⟩ := child_props hm1 hNP ha.2.1 ha.2.2
@@ -308,15 +308,15 @@ lemma card_D_ge {m x : ℕ} (hm1 : m % 2 = 1) (hNP : NP m) :
     have hmpos : 0 < m := by omega
     exact Nat.pow_right_injective (le_refl 2) (Nat.eq_of_mul_eq_mul_right hmpos (e1.symm.trans e2))
   rw [← card_biUnion]
-  · exact card_le_card (biUnion_subset.2 (fun a ha => D_subset (hprops a ha).2))
+  · exact card_le_card (biUnion_subset.2 (fun a ha => backTree_subset (hprops a ha).2))
   · intro a ha b hb hab
-    exact D_disjoint hNP (hprops a ha).2 (hprops b hb).2 (fun h => hab (hinj a ha b hb h))
+    exact backTree_disjoint hNP (hprops a ha).2 (hprops b hb).2 (fun h => hab (hinj a ha b hb h))
 
 /-- The constant on the right. -/
 noncomputable def KrBig : ℝ := 1000000 * ((2 : ℝ) ^ KrA) ^ ce
 
-theorem main_bound (x : ℕ) : ∀ d m, x - m = d → m ≤ x → m % 2 = 1 → m % 3 ≠ 0 → NP m →
-    (Cc (m % 27) : ℝ) * ((x : ℝ) / m) ^ ce ≤ KrBig * (D m x).card := by
+theorem main_bound (x : ℕ) : ∀ d m, x - m = d → m ≤ x → m % 2 = 1 → m % 3 ≠ 0 → notSyracusePeriodic m →
+    (Cc (m % 27) : ℝ) * ((x : ℝ) / m) ^ ce ≤ KrBig * (backTree m x).card := by
   intro d
   induction d using Nat.strong_induction_on with
   | _ d ih =>
@@ -325,8 +325,8 @@ theorem main_bound (x : ℕ) : ∀ d m, x - m = d → m ≤ x → m % 2 = 1 → 
                                  exact_mod_cast this
   have hce : (0 : ℝ) ≤ ce := by norm_num [ce]
   have hxm : (0 : ℝ) ≤ (x : ℝ) / m := by positivity
-  have hcard1 : (1 : ℝ) ≤ (D m x).card := by
-    have : 1 ≤ (D m x).card := card_pos.2 ⟨m, self_mem_D hm1 hmx⟩
+  have hcard1 : (1 : ℝ) ≤ (backTree m x).card := by
+    have : 1 ≤ (backTree m x).card := card_pos.2 ⟨m, self_mem_backTree hm1 hmx⟩
     exact_mod_cast this
   have hC : (Cc (m % 27) : ℝ) ≤ 1000000 := by
     have := Cc_le (m % 27) (Nat.mod_lt _ (by norm_num)); exact_mod_cast this
@@ -340,11 +340,11 @@ theorem main_bound (x : ℕ) : ∀ d m, x - m = d → m ≤ x → m % 2 = 1 → 
     calc (Cc (m % 27) : ℝ) * ((x : ℝ) / m) ^ ce ≤ 1000000 * ((2 : ℝ) ^ KrA) ^ ce :=
           mul_le_mul hC hp (by positivity) (by norm_num)
       _ = KrBig * 1 := by rw [KrBig, mul_one]
-      _ ≤ KrBig * (D m x).card := mul_le_mul_of_nonneg_left hcard1 (by unfold KrBig; positivity)
+      _ ≤ KrBig * (backTree m x).card := mul_le_mul_of_nonneg_left hcard1 (by unfold KrBig; positivity)
   · push Not at hsmall
     set S := (range (KrA + 1)).filter (fun a => 2 ≤ a ∧ condB m a)
     have hchild : ∀ a ∈ S, (Cc (child m a % 27) : ℝ) * ((3 : ℝ) / 2 ^ a) ^ ce * ((x : ℝ) / m) ^ ce ≤
-        KrBig * (D (child m a) x).card := by
+        KrBig * (backTree (child m a) x).card := by
       intro a ha
       have ha' := ha
       simp only [S, mem_filter, mem_range] at ha'
@@ -372,11 +372,11 @@ theorem main_bound (x : ℕ) : ∀ d m, x - m = d → m ≤ x → m % 2 = 1 → 
           mul_le_mul_of_nonneg_right (krCert_real hm3) (by positivity)
       _ = ∑ a ∈ S, (Cc (child m a % 27) : ℝ) * ((3 : ℝ) / 2 ^ a) ^ ce * ((x : ℝ) / m) ^ ce := by
           rw [sum_mul]
-      _ ≤ ∑ a ∈ S, KrBig * (D (child m a) x).card := sum_le_sum hchild
-      _ = KrBig * ((∑ a ∈ S, (D (child m a) x).card : ℕ) : ℝ) := by rw [← mul_sum]; push_cast; rfl
-      _ ≤ KrBig * (D m x).card := by
+      _ ≤ ∑ a ∈ S, KrBig * (backTree (child m a) x).card := sum_le_sum hchild
+      _ = KrBig * ((∑ a ∈ S, (backTree (child m a) x).card : ℕ) : ℝ) := by rw [← mul_sum]; push_cast; rfl
+      _ ≤ KrBig * (backTree m x).card := by
           apply mul_le_mul_of_nonneg_left _ (by unfold KrBig; positivity)
-          exact_mod_cast card_D_ge hm1 hNP
+          exact_mod_cast card_backTree_ge hm1 hNP
 
 open Classical in
 /-- **Krasikov's bound**: for some `κ > 0`, at least `κ N^(3/7)` integers `n ≤ N` reach `1`. -/
@@ -388,15 +388,15 @@ theorem card_reachesOne_ge_three_sevenths :
   refine ⟨(Cc 5 : ℝ) / (KrBig * (5 : ℝ) ^ ((3 : ℝ) / 7)), by
     have : (0 : ℝ) < Cc 5 := by norm_num [Cc, KrC]
     positivity, fun N hN => ?_⟩
-  have hmain := main_bound N (N - 5) 5 rfl hN (by norm_num) (by norm_num) NP_five
+  have hmain := main_bound N (N - 5) 5 rfl hN (by norm_num) (by norm_num) notSyracusePeriodic_five
   rw [show (5 : ℕ) % 27 = 5 by norm_num] at hmain
-  have hsub : D 5 N ⊆ (range (N + 1)).filter ReachesOne := by
+  have hsub : backTree 5 N ⊆ (range (N + 1)).filter ReachesOne := by
     intro n hn
-    rw [mem_D] at hn
+    rw [mem_backTree] at hn
     obtain ⟨h1, h2, j, hj⟩ := hn
     simp only [mem_filter, mem_range]
-    exact ⟨by omega, reachesOne_of_U_iterate h5 j n h2 hj⟩
-  have hcard : ((D 5 N).card : ℝ) ≤ (((range (N + 1)).filter ReachesOne).card : ℝ) := by
+    exact ⟨by omega, reachesOne_of_syracuse_iterate h5 j n h2 hj⟩
+  have hcard : ((backTree 5 N).card : ℝ) ≤ (((range (N + 1)).filter ReachesOne).card : ℝ) := by
     exact_mod_cast card_le_card hsub
   have h5pos : (0 : ℝ) < (5 : ℝ) ^ ((3 : ℝ) / 7) := by positivity
   have e : ((N : ℝ) / (5 : ℕ)) ^ ce = (N : ℝ) ^ ((3 : ℝ) / 7) / (5 : ℝ) ^ ((3 : ℝ) / 7) := by
@@ -405,8 +405,8 @@ theorem card_reachesOne_ge_three_sevenths :
   calc (Cc 5 : ℝ) / (KrBig * (5 : ℝ) ^ ((3 : ℝ) / 7)) * (N : ℝ) ^ ((3 : ℝ) / 7)
       = ((Cc 5 : ℝ) * ((N : ℝ) ^ ((3 : ℝ) / 7) / (5 : ℝ) ^ ((3 : ℝ) / 7))) / KrBig := by
         field_simp
-    _ ≤ (KrBig * (D 5 N).card) / KrBig := div_le_div_of_nonneg_right hmain hK.le
-    _ = (D 5 N).card := by field_simp
+    _ ≤ (KrBig * (backTree 5 N).card) / KrBig := div_le_div_of_nonneg_right hmain hK.le
+    _ = (backTree 5 N).card := by field_simp
     _ ≤ _ := hcard
 
 end Collatz

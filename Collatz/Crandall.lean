@@ -5,7 +5,7 @@ import Collatz.Cycle
 
 Going backwards from `1`: if `m` is odd, reaches `1`, and `2^a m ≡ 1 (mod 3)`, then
 `k = (2^a m - 1) / 3` is odd and reaches `1` (`step k = 2^a m`). Reducing mod `9`, for every odd
-`m` with `3 ∤ m` there are two exponents `3 ≤ a ≤ 8` for which `3 ∤ k` as well (`e1`, `e2`,
+`m` with `3 ∤ m` there are two exponents `3 ≤ a ≤ 8` for which `3 ∤ k` as well (`expoA`, `expoB`,
 checked by `decide`), so the backward tree branches forever. A node at depth `d` is at most
 `86^d` (since `2^8 / 3 < 86`), and since `3k + 1 = 2^a m` with `m` odd determines `m` and `a`,
 distinct branch choices give distinct numbers. Hence
@@ -27,15 +27,15 @@ open Finset
 def child (m a : ℕ) : ℕ := (2 ^ a * m - 1) / 3
 
 /-- Two exponents per residue of `m` mod `9`. -/
-def e1 (r : ℕ) : ℕ := match r with
+def expoA (r : ℕ) : ℕ := match r with
   | 1 => 4 | 2 => 3 | 4 => 6 | 5 => 3 | 7 => 4 | _ => 5
-def e2 (r : ℕ) : ℕ := match r with
+def expoB (r : ℕ) : ℕ := match r with
   | 1 => 8 | 2 => 7 | 4 => 8 | 5 => 5 | 7 => 6 | _ => 7
 
 theorem exponents_ok : ∀ r < 9, r % 3 ≠ 0 →
-    ((2 ^ e1 r * r) % 9 = 4 ∨ (2 ^ e1 r * r) % 9 = 7) ∧
-    ((2 ^ e2 r * r) % 9 = 4 ∨ (2 ^ e2 r * r) % 9 = 7) ∧
-    e1 r ≠ e2 r ∧ 1 ≤ e1 r ∧ e1 r ≤ 8 ∧ 1 ≤ e2 r ∧ e2 r ≤ 8 := by decide
+    ((2 ^ expoA r * r) % 9 = 4 ∨ (2 ^ expoA r * r) % 9 = 7) ∧
+    ((2 ^ expoB r * r) % 9 = 4 ∨ (2 ^ expoB r * r) % 9 = 7) ∧
+    expoA r ≠ expoB r ∧ 1 ≤ expoA r ∧ expoA r ≤ 8 ∧ 1 ≤ expoB r ∧ expoB r ≤ 8 := by decide
 
 lemma pow_mul_mod_nine (a m : ℕ) : (2 ^ a * m) % 9 = (2 ^ a * (m % 9)) % 9 := by
   rw [Nat.mul_mod, Nat.mul_mod (2 ^ a) (m % 9), Nat.mod_mod]
@@ -67,7 +67,7 @@ lemma child_spec {m a : ℕ} (ha : 1 ≤ a) (hm : ReachesOne m)
 /-! ## The tree -/
 
 /-- The exponent chosen at node `m` for branch `b`. -/
-def expo (m : ℕ) (b : Bool) : ℕ := if b then e1 (m % 9) else e2 (m % 9)
+def expo (m : ℕ) (b : Bool) : ℕ := if b then expoA (m % 9) else expoB (m % 9)
 
 /-- The node reached by the branch choices `l` (most recent first). -/
 def node : List Bool → ℕ

@@ -18,8 +18,9 @@ namespace Collatz.TwoAdic
 
 open PadicInt MeasureTheory Metric Set
 
-noncomputable instance : MeasurableSpace ℤ_[2] := borel _
-instance : BorelSpace ℤ_[2] := ⟨rfl⟩
+/-- The Borel σ-algebra on `ℤ_[2]`, scoped to `Collatz.TwoAdic` (Mathlib has none at this tag). -/
+noncomputable scoped instance : MeasurableSpace ℤ_[2] := borel _
+scoped instance : BorelSpace ℤ_[2] := ⟨rfl⟩
 
 /-- The Haar probability measure on `ℤ_[2]`. -/
 noncomputable def μ : Measure ℤ_[2] := Measure.addHaarMeasure ⊤
