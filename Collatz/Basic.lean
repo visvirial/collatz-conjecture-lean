@@ -1,4 +1,5 @@
 import Mathlib
+import Collatz.Defs
 
 /-!
 # The Collatz map: basic definitions

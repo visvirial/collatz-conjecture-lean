@@ -20,16 +20,6 @@ For a cycle with `a` even and `b` odd steps whose odd elements are `≥ N`:
 
 namespace Collatz
 
-/-- Lower convergent: `2^LP < 3^LQ`. -/
-def LP : ℕ := 176251
-def LQ : ℕ := 111202
-/-- Upper convergent: `3^UQ < 2^UP`. -/
-def UP : ℕ := 301994
-def UQ : ℕ := 190537
-/-- `κ = KN / KD > 1 / log 2`. -/
-def KN : ℕ := 10000000000
-def KD : ℕ := 6931471803
-
 theorem lower_conv : 2 ^ LP < 3 ^ LQ := by decide +kernel
 theorem upper_conv : 3 ^ UQ < 2 ^ UP := by decide +kernel
 
@@ -107,10 +97,6 @@ lemma upper_exp {a b N : ℕ} (hb : 1 ≤ b) (hN : 1 ≤ N) (h : N ^ b * 2 ^ a �
     ring_nf at hgoal ⊢
     linarith
   exact_mod_cast this
-
-/-- Cheap check that no cycle has `b` odd steps with all odd elements `≥ N`. -/
-def cycCheck2 (N b : ℕ) : Bool :=
-  b == 0 || Nat.ble (b * (UP * (3 * N) * KD + KN * UQ)) ((UQ * (3 * N) * KD) * (b * LP / LQ + 1))
 
 theorem odds_card_ge_of_check2 {n p N B : ℕ} (hc : IsCycle n p) (hnr : ¬ ReachesOne n)
     (hN : 1 ≤ N) (hsmall : ∀ y, 1 ≤ y → y < N → ReachesOne y)

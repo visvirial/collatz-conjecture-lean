@@ -18,7 +18,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Cycle.lean` | Constraints on nontrivial cycles |
 | `Collatz/Kernel.lean` | Kernel-friendly checkers (`resCheck`, `kall`, ...) with soundness proofs |
 | `Collatz/CycleBound.lean` | Cheap cycle exponent check via rational bounds on `log₂ 3` |
-| `CollatzBig/` | Generated chunked verification up to `2^24` (not a default target) |
+| `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
 
@@ -51,15 +51,18 @@ at least 41 odd steps, at least 65 even steps, and length at least 106
 (`scripts/plan.c` estimates and balances the cost). The current instance proves
 
 ```lean
-theorem CollatzBig.descends_below : ∀ n, 2 ≤ n → n < 16777216 → Descends n
-theorem CollatzBig.cycle_length_ge (hc : IsCycle n p) (hnr : ¬ ReachesOne n) : 31733 ≤ p
+theorem CollatzBig.descends_below : ∀ n, 2 ≤ n → n < 4294967296 → Descends n
+theorem CollatzBig.cycle_length_ge (hc : IsCycle n p) (hnr : ¬ ReachesOne n) : 205078 ≤ p
 ```
 
-(at least 12276 odd and 19457 even steps). It takes about 4 minutes on 32 cores:
+(at least 79335 odd and 125743 even steps). The 6000 residue chunks (~0.5M accelerated
+steps each, ~4.5 GB peak memory, 30–45 s) total roughly 65 CPU-hours; with ~28 parallel
+workers it took about 2 hours. Chunk modules only import `Collatz.Defs` (no Mathlib), so
+they can be compiled independently with `lean -o` on several machines:
 
 ```sh
-gcc -O2 -o plan scripts/plan.c && ./plan 16 256 > plan.txt
-python3 scripts/gen_big.py 16 256 1000 96 4 plan.txt
+gcc -O2 -o plan scripts/plan.c && ./plan 24 256 > plan.txt
+python3 scripts/gen_big.py 24 256 1000 6000 8 plan.txt
 lake build CollatzBig
 ```
 

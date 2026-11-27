@@ -13,17 +13,13 @@ sound, so large verifications can be split into many small kernel-checked chunk 
 
 namespace Collatz
 
-/-- Kernel-friendly `step`. -/
-def kstep (n : ℕ) : ℕ := bif n % 2 == 0 then n / 2 else 3 * n + 1
-
-lemma kstep_eq (n : ℕ) : kstep n = step n := by
-  unfold kstep step
-  by_cases h : n % 2 = 0 <;> simp [h]
-
-/-- Does the orbit of `x` drop below `n0` within `fuel` steps? -/
-def kdesc (n0 fuel x : ℕ) : Bool :=
-  Nat.rec (motive := fun _ => ℕ → Bool) (fun _ => false)
-    (fun _ rec x => (kstep x).blt n0 || rec (kstep x)) fuel x
+/-- One accelerated step is one or two Collatz steps. -/
+lemma kstepT_iter (x : ℕ) : ∃ j, 1 ≤ j ∧ step^[j] x = kstepT x := by
+  rcases Nat.mod_two_eq_zero_or_one x with h | h
+  · exact ⟨1, le_rfl, by simp [kstepT, step_even h, h]⟩
+  · refine ⟨2, by norm_num, ?_⟩
+    have h2 : (3 * x + 1) % 2 = 0 := by omega
+    simp [kstepT, h, step_odd h, step_even h2]
 
 lemma kdesc_spec {n0 : ℕ} :
     ∀ {fuel x : ℕ}, kdesc n0 fuel x = true → ∃ j, 1 ≤ j ∧ step^[j] x < n0
@@ -31,16 +27,13 @@ lemma kdesc_spec {n0 : ℕ} :
     have : kdesc n0 0 x = false := rfl
     simp [this] at h
   | f + 1, x, h => by
-    have e : kdesc n0 (f + 1) x = ((kstep x).blt n0 || kdesc n0 f (kstep x)) := rfl
-    rw [e, Bool.or_eq_true, Nat.blt_eq, kstep_eq] at h
+    have e : kdesc n0 (f + 1) x = ((kstepT x).blt n0 || kdesc n0 f (kstepT x)) := rfl
+    rw [e, Bool.or_eq_true, Nat.blt_eq] at h
+    obtain ⟨j0, hj0, he0⟩ := kstepT_iter x
     rcases h with h | h
-    · exact ⟨1, le_rfl, by simpa using h⟩
+    · exact ⟨j0, hj0, he0 ▸ h⟩
     · obtain ⟨j, hj, he⟩ := kdesc_spec h
-      exact ⟨j + 1, by omega, by rwa [Function.iterate_succ_apply]⟩
-
-/-- `kall f n = true` iff `f i = true` for all `i < n`. -/
-def kall (f : ℕ → Bool) (n : ℕ) : Bool :=
-  Nat.rec (motive := fun _ => Bool) true (fun i acc => f i && acc) n
+      exact ⟨j + j0, by omega, by rw [Function.iterate_add_apply, he0]; exact he⟩
 
 lemma kall_spec {f : ℕ → Bool} : ∀ {n : ℕ}, kall f n = true → ∀ i < n, f i = true
   | 0, _, i, hi => absurd hi (Nat.not_lt_zero i)
@@ -50,12 +43,6 @@ lemma kall_spec {f : ℕ → Bool} : ∀ {n : ℕ}, kall f n = true → ∀ i < 
     rcases Nat.lt_succ_iff_lt_or_eq.1 hi with hi | rfl
     · exact kall_spec h.2 i hi
     · exact h.1
-
-/-- Residue check: either `r` is certified (and `r` itself descends), or every
-`n = 2^k m + r` with `m < M` is checked directly. -/
-def resCheck (k M fuel r : ℕ) : Bool :=
-  (cert k r && (r.blt 2 || kdesc r fuel r)) ||
-    kall (fun m => (2 ^ k * m + r).blt 2 || kdesc (2 ^ k * m + r) fuel (2 ^ k * m + r)) M
 
 theorem descends_of_resCheck {k M fuel : ℕ} (h : ∀ r < 2 ^ k, resCheck k M fuel r = true) :
     ∀ n, 2 ≤ n → n < 2 ^ k * M → Descends n := by
@@ -81,18 +68,6 @@ theorem descends_of_resCheck {k M fuel : ℕ} (h : ∀ r < 2 ^ k, resCheck k M f
     rcases this with hs | hs
     · omega
     · exact kdesc_spec hs
-
-/-- Check that residues `lo ≤ r < lo + len` pass `resCheck`. -/
-def resChunk (k M fuel lo len : ℕ) : Bool := kall (fun i => resCheck k M fuel (lo + i)) len
-
-lemma resCheck_of_resChunk {k M fuel lo len : ℕ} (h : resChunk k M fuel lo len = true) :
-    ∀ r, lo ≤ r → r < lo + len → resCheck k M fuel r = true := by
-  intro r h1 h2
-  have := kall_spec h (r - lo) (by omega)
-  rwa [Nat.add_sub_cancel' h1] at this
-
-/-- `kallFrom f lo len = true` iff `f i = true` for all `lo ≤ i < lo + len`. -/
-def kallFrom (f : ℕ → Bool) (lo len : ℕ) : Bool := kall (fun i => f (lo + i)) len
 
 lemma kallFrom_spec {f : ℕ → Bool} {lo len : ℕ} (h : kallFrom f lo len = true) :
     ∀ i, lo ≤ i → i < lo + len → f i = true := by

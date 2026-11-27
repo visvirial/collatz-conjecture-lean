@@ -14,9 +14,6 @@ If at some point the affine form `a' * m + b'` satisfies `a' < 2^k` and `b' ≤ 
 
 namespace Collatz
 
-/-- One symbolic step on the affine form `a * m + b` (valid when `a` is even). -/
-def next (a b : ℕ) : ℕ × ℕ := if b % 2 = 0 then (a / 2, b / 2) else (3 * a, 3 * b + 1)
-
 lemma step_affine {a b : ℕ} (ha : a % 2 = 0) (m : ℕ) :
     step (a * m + b) = (next a b).1 * m + (next a b).2 := by
   obtain ⟨a0, rfl⟩ : ∃ a0, a = 2 * a0 := ⟨a / 2, by omega⟩
@@ -30,15 +27,6 @@ lemma step_affine {a b : ℕ} (ha : a % 2 = 0) (m : ℕ) :
     rw [step_odd (by omega)]
     ring
 
-/-- Symbolic run with fuel, checking for a certificate of descent. -/
-def certAux (K r : ℕ) : ℕ → ℕ → ℕ → Bool
-  | 0, _, _ => false
-  | fuel + 1, a, b =>
-    if a % 2 = 0 then
-      if (next a b).1 < K ∧ (next a b).2 ≤ r then true
-      else certAux K r fuel (next a b).1 (next a b).2
-    else false
-
 lemma certAux_spec {K r : ℕ} :
     ∀ {fuel a b : ℕ}, certAux K r fuel a b = true → ∀ m : ℕ,
       ∃ j a' b', 1 ≤ j ∧ a' < K ∧ b' ≤ r ∧ step^[j] (a * m + b) = a' * m + b'
@@ -50,9 +38,6 @@ lemma certAux_spec {K r : ℕ} :
     · obtain ⟨j, a', b', hj, ha', hb', he⟩ := certAux_spec h m
       refine ⟨j + 1, a', b', by omega, ha', hb', ?_⟩
       rw [Function.iterate_succ_apply, step_affine ha m, he]
-
-/-- `cert k r = true` certifies that every `n ≥ 2^k` with `n % 2^k = r` descends. -/
-def cert (k r : ℕ) : Bool := certAux (2 ^ k) r (2 * k + 1) (2 ^ k) r
 
 theorem descends_of_cert {k r n : ℕ} (h : cert k r = true) (hr : n % 2 ^ k = r)
     (hn : 2 ^ k ≤ n) : Descends n := by

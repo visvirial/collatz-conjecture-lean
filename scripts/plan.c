@@ -13,9 +13,9 @@ static int cert(int k, u128 r) {
   }
   return 0;
 }
-static long desc(u128 n) {  // steps until < n (n >= 2)
+static long desc(u128 n) {  // accelerated steps (odd: (3x+1)/2) until < n (n >= 2)
   u128 x = n; long s = 0;
-  do { x = (x % 2 == 0) ? x / 2 : 3 * x + 1; s++; } while (x >= n);
+  do { if (x % 2 == 0) x = x / 2; else x = (3 * x + 1) / 2; s++; } while (x >= n);
   return s;
 }
 int main(int argc, char **argv) {
