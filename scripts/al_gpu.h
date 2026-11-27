@@ -32,13 +32,22 @@ typedef struct { int P, Q, D, Lmax, split, mmax; int dmax[64]; u64 P3[41]; } GPa
 #ifdef __cplusplus
 extern "C" {
 #endif
-// allocate everything; returns 0 on success. poolCap summaries, arenaTotal entries (shared by all blocks).
-int gpu_init(const GParams *g, u64 arenaTotal, u64 poolCap);
+// All functions return 0 on success and nonzero on a CUDA error (message on stderr); they never exit.
+// gpu_init allocates everything once (no allocation later): poolCap summaries, arenaTotal arena entries shared by all blocks (0: perBlock * blocks,
+// capped by the free memory), inputs of up to tCap tasks with up to inCap frontier entries per launch.
+int gpu_init(const GParams *g, u64 arenaTotal, u64 perBlock, int blocks, u64 poolCap, u64 inCap, int tCap);
 // run nt tasks asynchronously with `blocks` blocks (arena per block = arenaTotal / blocks).
-void gpu_launch(int nt, const TaskIn *t, const u64 *xin, const u64 *min, u64 nin, int blocks);
-// wait for the last launch; copy the per-task outputs and the summaries; returns the summary
-// count (> dstcap: truncated, cannot happen when dstcap >= poolCap). *ms: kernel milliseconds.
-u64 gpu_wait(TaskOut *out, int nt, Summ *dst, u64 dstcap, double *ms);
+// returns 1 (nothing launched) if nt > tCap or nin > inCap, 2 on a CUDA error.
+int gpu_launch(int nt, const TaskIn *t, const u64 *xin, const u64 *min, u64 nin, int blocks);
+// wait for the last launch; copy the per-task outputs (flags, nsumm = the summaries of the task in
+// the pool). *cnt: the number of summaries emitted (> poolCap: the pool overflowed; the tasks
+// concerned are flagged TF_QUOTA). *ms: kernel milliseconds.
+int gpu_wait(TaskOut *out, int nt, u64 *cnt, double *ms);
+// after gpu_wait: the n[i] summaries of task i to dst[off[i] .. off[i] + n[i]) (any order within a
+// task), for each i with off[i] != ~0 (off increasing in i). dst: preferably from gpu_host_alloc.
+int gpu_fetch(int nt, const u64 *off, const unsigned *n, Summ *dst);
+Summ *gpu_host_alloc(u64 n); // pinned host memory (NULL on failure)
+void gpu_host_free(Summ *p);
 u64 gpu_arena_total(void);
 u64 gpu_pool_cap(void);
 #ifdef __cplusplus

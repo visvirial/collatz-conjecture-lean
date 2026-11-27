@@ -6,8 +6,11 @@
 // al_vec's frontier(), the GPU (or the CPU reference refTask() below, GPU=0) searches the whole
 // task subtree once and returns per-class summaries (T_v and stage-1 work of tree(X) for every
 // class X), and treeG() replays tree() on them: same S / L decisions, same hints, same stage-2
-// runs (al_vec's cover2), same counters. A task with a failure or a resource flag is rerun by
-// al_vec's tree().
+// runs (al_vec's cover2), same counters. A task with a failure is rerun by al_vec's tree(); a
+// task the GPU cannot fit (after the retries in finishGPU), or every task after a CUDA error, gets
+// its stage 1 from refTask on the CPU instead.
+// Batches: the summaries of a launch are gathered per task on the GPU and copied once into a
+// pinned batch store (no host-side scatter); the next batch runs on the GPU during stage 2.
 #define main al_vec_main
 #include "al_vec.c"
 #undef main
@@ -113,6 +116,7 @@ typedef struct {
   u64 *x, *mk;          // root frontier (freed after the upload)
   unsigned flags;
   Summ *s; size_t ns;   // summaries, sorted by (m, r)
+  size_t soff; int inStore; // GPU tasks: s = bStore + soff (set when the batch is collected), not malloc'd
   u64 hw, classes;
 } Task;
 
@@ -314,7 +318,8 @@ static void finishTask(Task *t, Ad *a) {
     dumpTask(t);
     treeG(t, t->r, split, a);
   }
-  free(t->s); t->s = NULL; t->ns = 0;
+  if (!t->inStore) free(t->s);
+  t->s = NULL; t->ns = 0; t->inStore = 0;
 }
 
 static void refTask(Task *t) {
@@ -331,11 +336,11 @@ static void refTask(Task *t) {
 static int envi(const char *n, int dflt) { const char *s = getenv(n); return s ? atoi(s) : dflt; }
 
 #ifndef NOGPU
-// launch the tasks t[0..nt) on the GPU (asynchronously)
-typedef struct { Task *t; int nt; } Batch;
+// launch the tasks t[0..nt) on the GPU (asynchronously); returns gpu_launch's status
 static TaskIn *bTin; static u64 *bX, *bM; static size_t bTcap, bXcap;
-static int gBlocks;
-static void launchTasks(Task **ts, int nt, int blocks) {
+static int gBlocks, gpuDead;
+static int launchTasks(Task **ts, int nt, int blocks) {
+  if (gpuDead) return 2;
   if ((size_t)nt > bTcap) { bTcap = nt; bTin = realloc(bTin, sizeof(TaskIn) * bTcap); }
   size_t nin = 0;
   for (int i = 0; i < nt; i++) nin += ts[i]->n;
@@ -344,65 +349,144 @@ static void launchTasks(Task **ts, int nt, int blocks) {
   for (int i = 0; i < nt; i++) {
     Task *t = ts[i];
     bTin[i].r = t->r; bTin[i].inOff = o; bTin[i].n = t->n; bTin[i].pad = 0;
-    memcpy(bX + o, t->x, 8 * t->n); memcpy(bM + o, t->mk, 8 * t->n); o += t->n;
+    if (t->n) { memcpy(bX + o, t->x, 8 * t->n); memcpy(bM + o, t->mk, 8 * t->n); }
+    o += t->n;
   }
-  gpu_launch(nt, bTin, bX, bM, nin ? nin : 1, blocks);
+  int rc = gpu_launch(nt, bTin, bX, bM, nin ? nin : 1, blocks);
+  if (rc == 2) { gpuDead = 1; fprintf(stderr, "al_gpu: GPU error, the remaining tasks run on the CPU reference\n"); }
+  return rc;
 }
-static Summ *hPool; static TaskOut *hOut; static size_t hOutCap;
-static double gpuMs; static u64 gpuSumm, gpuClasses, gpuHw, nRetry;
-// wait for the launch of ts[0..nt); distribute the summaries; returns the tasks to retry
+static TaskOut *hOut; static size_t hOutCap;
+static Summ *bStore; static size_t bStoreN, bStoreCap;
+static double gpuMs, tWaitCopy; static u64 gpuSumm, gpuClasses, gpuHw, gpuDone, nRetry, nLaunch, nCpuRef, nOverflow;
+// wait for the launch of ts[0..nt); distribute the summaries. Returns -1 on a GPU error (the
+// tasks are untouched), else the number of tasks flagged TF_ARENA or TF_QUOTA, put in retry[]
 static int collect(Task **ts, int nt, Task **retry) {
   if ((size_t)nt > hOutCap) { hOutCap = nt; hOut = realloc(hOut, sizeof(TaskOut) * hOutCap); }
-  double ms;
-  u64 cnt = gpu_wait(hOut, nt, hPool, gpu_pool_cap(), &ms);
-  gpuMs += ms;
-  u64 c = cnt < gpu_pool_cap() ? cnt : gpu_pool_cap();
-  size_t *num = calloc(nt + 1, sizeof(size_t));
-  for (u64 i = 0; i < c; i++) num[hPool[i].task]++;
+  double ms, tc = omp_get_wtime(); u64 cnt;
+  if (gpu_wait(hOut, nt, &cnt, &ms)) { gpuDead = 1; fprintf(stderr, "al_gpu: GPU error, the remaining tasks run on the CPU reference\n"); return -1; }
+  gpuMs += ms; nLaunch++;
+  if (cnt > gpu_pool_cap()) nOverflow++;
+  u64 *off = malloc(sizeof(u64) * (nt ? nt : 1)); unsigned *num = malloc(sizeof(unsigned) * (nt ? nt : 1));
+  size_t add = 0;
   for (int i = 0; i < nt; i++) {
     Task *t = ts[i];
     t->flags |= hOut[i].flags; t->hw = hOut[i].hw; t->classes = hOut[i].classes;
     if (t->hw > gpuHw) gpuHw = t->hw;
-    if (!t->flags) { t->s = malloc(sizeof(Summ) * (num[i] ? num[i] : 1)); t->ns = 0; }
+    num[i] = hOut[i].nsumm; off[i] = ~0ULL;
+    if (!t->flags) { off[i] = bStoreN + add; add += num[i]; }
   }
-  for (u64 i = 0; i < c; i++) { Task *t = ts[hPool[i].task]; if (!t->flags) t->s[t->ns++] = hPool[i]; }
+  // the summaries of the completed tasks go to the batch store (pinned, reused across batches)
+  if (bStoreN + add > bStoreCap) {
+    size_t nc = bStoreN + add > bStoreCap * 3 / 2 ? bStoreN + add : bStoreCap * 3 / 2;
+    Summ *ns = gpu_host_alloc(nc), *old = bStore;
+    if (!ns) die("out of memory (summary store)");
+    if (bStoreN) memcpy(ns, old, sizeof(Summ) * bStoreN);
+    gpu_host_free(old); bStore = ns; bStoreCap = nc;
+  }
+  if (gpu_fetch(nt, off, num, bStore)) { gpuDead = 1; free(off); free(num); fprintf(stderr, "al_gpu: GPU error, the remaining tasks run on the CPU reference\n"); return -1; }
+  for (int i = 0; i < nt; i++) {
+    Task *t = ts[i];
+    if (t->flags) continue;
+    t->inStore = 1; t->soff = off[i]; t->ns = num[i]; t->s = NULL;
+  }
+  bStoreN += add;
+  free(off); free(num);
+  tWaitCopy += omp_get_wtime() - tc;
   int nr = 0;
   for (int i = 0; i < nt; i++) {
     Task *t = ts[i];
     gpuClasses += t->classes;
-    if (!t->flags) { gpuSumm += t->ns; continue; }
+    if (!t->flags) { gpuSumm += t->ns; gpuDone++; continue; }
     if ((t->flags & (TF_ARENA | TF_QUOTA)) && !(t->flags & (TF_FAIL | TF_OVF))) { retry[nr++] = t; }
   }
-  free(num);
   return nr;
 }
-// finish a launched batch: collect, rerun arena/quota-flagged tasks (alone or in small groups,
-// with a large arena per block); tasks still flagged go to the CPU fallback
-static void finishGPU(Task **ts, int nt) {
-  Task **retry = malloc(sizeof(Task *) * nt);
-  int nr = collect(ts, nt, retry);
-  int blocks = gBlocks, group = nt;
-  while (nr) {
-    nRetry += nr;
-    int arena = 0; for (int i = 0; i < nr; i++) if (retry[i]->flags & TF_ARENA) arena = 1;
-    if (arena) blocks = blocks / 4 > 0 ? blocks / 4 : 1; // a larger arena per block
-    else group = group / 2 > 0 ? group / 2 : 1;          // fewer tasks share the summary pool
-    if (group > nr) group = nr;
-    int nn = 0; Task **next = malloc(sizeof(Task *) * (size_t)(nr > 0 ? nr : 1));
-    for (int g0 = 0; g0 < nr; g0 += group) {
-      int gn = nr - g0 < group ? nr - g0 : group;
-      for (int i = 0; i < gn; i++) retry[g0 + i]->flags = 0;
-      launchTasks(retry + g0, gn, blocks < gn ? blocks : gn);
-      nn += collect(retry + g0, gn, next + nn);
-    }
-    int stuck = nn == nr && (arena ? blocks == 1 : group == 1);
-    memcpy(retry, next, sizeof(Task *) * nn); nr = nn; free(next);
-    if (stuck) break; // CPU fallback for the rest (flags kept)
+// stage 1 of tasks the GPU could not do, by the CPU reference refTask (same summaries)
+static void cpuRef(Task **ts, int n) {
+  if (!n) return;
+  nCpuRef += n;
+  #pragma omp parallel for schedule(dynamic, 1)
+  for (int i = 0; i < n; i++) { ts[i]->flags &= ~(unsigned)(TF_ARENA | TF_QUOTA); refTask(ts[i]); } // other flags: tree()
+}
+// run the tasks list[0..n) in launches of `group` tasks with min(blocks, group) blocks; the
+// flagged ones go to arena[] (TF_ARENA) or quota[] (TF_QUOTA, or not launchable), the tasks of a
+// failed GPU to cpu[]
+static void runGroups(Task **list, int n, int group, int blocks, Task **arena, int *na, Task **quota, int *nq, Task **cpu, int *nc) {
+  Task **tmp = malloc(sizeof(Task *) * (size_t)(n > 0 ? n : 1));
+  for (int g0 = 0; g0 < n; g0 += group) {
+    int gn = n - g0 < group ? n - g0 : group;
+    Task **L = list + g0;
+    for (int i = 0; i < gn; i++) L[i]->flags &= ~(unsigned)(TF_ARENA | TF_QUOTA); // prepTask's flags stay
+    int rc = launchTasks(L, gn, blocks < gn ? blocks : gn), nr = 0;
+    if (rc == 1) { for (int i = 0; i < gn; i++) quota[(*nq)++] = L[i]; continue; }
+    if (rc == 0) nr = collect(L, gn, tmp);
+    if (rc || nr < 0) { for (int i = 0; i < gn; i++) cpu[(*nc)++] = L[i]; continue; }
+    for (int i = 0; i < nr; i++) { if (tmp[i]->flags & TF_ARENA) arena[(*na)++] = tmp[i]; else quota[(*nq)++] = tmp[i]; }
   }
-  free(retry);
+  free(tmp);
+}
+// finish a batch (launched: its launch status): collect, then rerun the flagged tasks.
+// TF_QUOTA (the summary pool, shared by the launch, overflowed): all of them again with all the
+// blocks (each launch completes about a pool of summaries); the group size is halved only when
+// a launch completes none of them. TF_ARENA: with 4x fewer blocks (4x the arena per block).
+// Tasks that still do not fit (one task over the pool, or over the whole arena), and all tasks
+// after a GPU error, get their stage 1 from the CPU reference.
+static void finishGPU(Task **ts, int nt, int launched) {
+  size_t sz = sizeof(Task *) * (size_t)(nt > 0 ? nt : 1);
+  Task **ar = malloc(sz), **qu = malloc(sz), **cp = malloc(sz), **ar2 = malloc(sz), **qu2 = malloc(sz);
+  int na = 0, nq = 0, nc = 0;
+  bStoreN = 0; // the previous batch is finished
+  if (launched == 0) {
+    Task **tmp = malloc(sz);
+    int nr = collect(ts, nt, tmp);
+    if (nr < 0) for (int i = 0; i < nt; i++) cp[nc++] = ts[i];
+    else for (int i = 0; i < nr; i++) { if (tmp[i]->flags & TF_ARENA) ar[na++] = tmp[i]; else qu[nq++] = tmp[i]; }
+    free(tmp);
+  } else if (launched == 1) { for (int i = 0; i < nt; i++) qu[nq++] = ts[i]; }
+  else for (int i = 0; i < nt; i++) cp[nc++] = ts[i];
+  int group = nt, blocks = gBlocks;
+  for (int round = 0; (na || nq) && round < 200; round++) {
+    nRetry += na + nq;
+    int na2 = 0, nq2 = 0;
+    if (nq) {
+      int g = group < nq ? group : nq;
+      runGroups(qu, nq, g, gBlocks, ar2, &na2, qu2, &nq2, cp, &nc);
+      if (nq2 == nq) { // no progress
+        if (g == 1) { for (int i = 0; i < nq2; i++) cp[nc++] = qu2[i]; nq2 = 0; }
+        else group = g / 2;
+      }
+    }
+    if (na) {
+      if (blocks == 1) { for (int i = 0; i < na; i++) cp[nc++] = ar[i]; }
+      else {
+        blocks = blocks / 4 > 0 ? blocks / 4 : 1;
+        runGroups(ar, na, na, blocks, ar2, &na2, qu2, &nq2, cp, &nc);
+      }
+    }
+    Task **t;
+    t = ar; ar = ar2; ar2 = t; na = na2;
+    t = qu; qu = qu2; qu2 = t; nq = nq2;
+  }
+  for (int i = 0; i < na; i++) cp[nc++] = ar[i];
+  for (int i = 0; i < nq; i++) cp[nc++] = qu[i];
+  cpuRef(cp, nc);
+  for (int i = 0; i < nt; i++) if (ts[i]->inStore) ts[i]->s = bStore + ts[i]->soff;
+  free(ar); free(qu); free(cp); free(ar2); free(qu2);
 }
 #endif
 
+#ifndef NOGPU
+static int nextBatch(int lo, int nt, int bmax, u64 pool, double fill) {
+  int n = bmax;
+  if (gpuDone) {
+    double avg = (double)gpuSumm / gpuDone, want = fill * (double)pool / (avg > 1 ? avg : 1);
+    if (want < 32) want = 32; // keep the GPU busy; an overflow only costs a retry
+    if (want < n) n = (int)want;
+  }
+  return n < nt - lo ? n : nt - lo;
+}
+#endif
 static int cmpTaskN(const void *a, const void *b) {
   const Task *x = a, *y = b;
   return x->n > y->n ? -1 : x->n < y->n;
@@ -463,52 +547,66 @@ int main(int argc, char **argv) {
     #pragma omp parallel for schedule(dynamic, 16)
     for (int i = 0; i < nt; i++) { St s = {0}; Ent *f; int n = frontier(T[i].r, split, &f, &s, 1); free(f); T[i].n = n > 0 ? n : 0; }
     qsort(T, nt, sizeof(Task), cmpTaskN);
+    int bmax = envi("GPU_BATCH", 1024); if (bmax < 1) bmax = 1;
+    u64 inCap = 0; // the largest batch input: the first bmax tasks (largest first)
+    for (int i = 0; i < nt && i < bmax; i++) inCap += T[i].n;
     for (int i = 0; i < nt; i++) T[i].n = 0;
     GParams gp; memset(&gp, 0, sizeof gp);
     gp.P = P; gp.Q = Q; gp.D = D; gp.Lmax = Lmax; gp.split = split; gp.mmax = mmax;
     for (int w = 0; w < 64; w++) gp.dmax[w] = w <= Lmax ? dmaxv[w] : 0;
     for (int i = 0; i <= 40; i++) gp.P3[i] = P3[i];
-    u64 pool = getenv("GPU_REC") ? strtoull(getenv("GPU_REC"), 0, 10) : 4000000ULL;
+    u64 pool = getenv("GPU_REC") ? strtoull(getenv("GPU_REC"), 0, 10) : 8000000ULL;
     u64 arena = getenv("GPU_ARENA") ? strtoull(getenv("GPU_ARENA"), 0, 10) : 0;
-    gpu_init(&gp, arena, pool);
-    gBlocks = envi("GPU_BLOCKS", 272);
-    hPool = malloc(sizeof(Summ) * pool);
-    int bs = envi("GPU_BATCH", 1024);
-    int nb = (nt + bs - 1) / bs;
-    fprintf(stderr, "al_gpu: %d tasks, %d batches, blocks=%d arena/block=%llu pool=%llu, prep %.1fs\n",
-            nt, nb, gBlocks, gpu_arena_total() / gBlocks, pool, omp_get_wtime() - tp);
+    u64 perBlock = getenv("GPU_ARENA_BLOCK") ? strtoull(getenv("GPU_ARENA_BLOCK"), 0, 10) : 600000ULL;
+    gBlocks = envi("GPU_BLOCKS", 272); if (gBlocks < 1) gBlocks = 1;
+    if (gpu_init(&gp, arena, perBlock, gBlocks, pool, inCap, bmax)) {
+      gpuDead = 1; fprintf(stderr, "al_gpu: GPU initialization failed, stage 1 by the CPU reference\n");
+    }
+    if (!gpuDead) { // the batch store (pinned; a batch is sized to fill about GPU_FILL of a pool)
+      bStoreCap = pool + pool / 4; bStore = gpu_host_alloc(bStoreCap);
+      if (!bStore) die("out of memory (summary store)");
+    }
+    // batch sizes: about half a pool of summaries per batch, from the average of the GPU-done
+    // tasks so far (an overestimate later on: the tasks come largest first); the first batch is one wave
+    double fill = getenv("GPU_FILL") ? atof(getenv("GPU_FILL")) : 0.5;
+    fprintf(stderr, "al_gpu: %d tasks, batch<=%d, blocks=%d arena/block=%llu pool=%llu input=%llu, prep %.1fs\n",
+            nt, bmax, gBlocks, gpuDead ? 0 : gpu_arena_total() / gBlocks, pool, inCap, omp_get_wtime() - tp);
     Task **ptr = malloc(sizeof(Task *) * (nt ? nt : 1));
     for (int i = 0; i < nt; i++) ptr[i] = &T[i];
     double tq = omp_get_wtime();
     // pipeline: prep(b+1) and stage 2 of b on the CPU while the GPU runs the next batch
-    #define BLO(b) ((b) * bs)
-    #define BN(b) ((b) + 1 < nb ? bs : nt - (b) * bs)
-    if (nb) {
+    int lo = 0, n0 = nt ? (bmax < gBlocks ? bmax : gBlocks) : 0, b = 0, st = 0;
+    if (n0 > nt) n0 = nt;
+    if (n0) {
       #pragma omp parallel for schedule(dynamic, 4)
-      for (int i = 0; i < BN(0); i++) prepTask(ptr[i]);
-      launchTasks(ptr, BN(0), gBlocks);
+      for (int i = 0; i < n0; i++) prepTask(ptr[i]);
+      st = launchTasks(ptr, n0, gBlocks);
     }
-    for (int b = 0; b < nb; b++) {
-      if (b + 1 < nb) {
+    while (lo < nt) {
+      int n = n0, lo1 = lo + n;
+      int n1 = lo1 < nt ? nextBatch(lo1, nt, bmax, pool, fill) : 0;
+      if (n1) {
         #pragma omp parallel for schedule(dynamic, 4)
-        for (int i = 0; i < BN(b + 1); i++) prepTask(ptr[BLO(b + 1) + i]);
+        for (int i = 0; i < n1; i++) prepTask(ptr[lo1 + i]);
       }
       double tw = omp_get_wtime();
-      finishGPU(ptr + BLO(b), BN(b));
+      finishGPU(ptr + lo, n, st);
       double tw2 = omp_get_wtime();
-      for (int i = 0; i < BN(b); i++) { free(ptr[BLO(b) + i]->x); free(ptr[BLO(b) + i]->mk); ptr[BLO(b) + i]->x = ptr[BLO(b) + i]->mk = NULL; }
-      if (b + 1 < nb) launchTasks(ptr + BLO(b + 1), BN(b + 1), gBlocks);
+      for (int i = 0; i < n; i++) { free(ptr[lo + i]->x); free(ptr[lo + i]->mk); ptr[lo + i]->x = ptr[lo + i]->mk = NULL; }
+      if (n1) st = launchTasks(ptr + lo1, n1, gBlocks);
       #pragma omp parallel
       {
         Ad a = {0};
         #pragma omp for schedule(dynamic, 1)
-        for (int i = 0; i < BN(b); i++) finishTask(ptr[BLO(b) + i], &a);
+        for (int i = 0; i < n; i++) finishTask(ptr[lo + i], &a);
         #pragma omp critical
         { tot.w1 += a.w1; tot.w2 += a.w2; tot.cw += a.cw; tot.chunks += a.chunks; tot.big += a.big; tot.fail += a.fail; }
       }
       fflush(stdout);
-      fprintf(stderr, "al_gpu: batch %d/%d tasks=%d gpu=%.1fs(total) wait=%.1fs stage2=%.1fs summ=%llu classes=%llu hw=%llu retry=%llu fallback=%llu t=%.0fs\n",
-              b + 1, nb, BN(b), gpuMs / 1000, tw2 - tw, omp_get_wtime() - tw2, gpuSumm, gpuClasses, gpuHw, nRetry, nFallback, omp_get_wtime() - tq);
+      b++;
+      fprintf(stderr, "al_gpu: batch %d tasks=%d done=%d/%d gpu=%.1fs(total) wait=%.1fs stage2=%.1fs summ=%llu classes=%llu hw=%llu (collect %.1fs) launches=%llu overflow=%llu retry=%llu cpuref=%llu fallback=%llu t=%.0fs\n",
+              b, n, lo1, nt, gpuMs / 1000, tw2 - tw, omp_get_wtime() - tw2, gpuSumm, gpuClasses, gpuHw, tWaitCopy, nLaunch, nOverflow, nRetry, nCpuRef, nFallback, omp_get_wtime() - tq);
+      lo = lo1; n0 = n1;
     }
   }
 #endif
