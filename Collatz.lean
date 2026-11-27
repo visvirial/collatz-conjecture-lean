@@ -41,3 +41,4 @@ import Collatz.ExtDefs
 import Collatz.ExtKernel
 import Collatz.RozierTerracolParadox
 import Collatz.TaoSyracuseValuation
+import Collatz.BernsteinFormula
