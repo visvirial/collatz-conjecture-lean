@@ -27,6 +27,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/StoppingTime.lean` | Exact density of integers with stopping time `≤ k` |
 | `Collatz/Haar.lean` | `T` on `ℤ_[2]` preserves Haar measure |
 | `Collatz/Ergodic.lean` | `T` on `ℤ_[2]` is ergodic |
+| `Collatz/Bernoulli.lean` | `T` on `ℤ_[2]` is isomorphic to the Bernoulli shift |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -134,6 +135,16 @@ theorem T_ergodic : Ergodic T μ
 
 For a ball `B` of radius `2^-k` and measurable `E`, `μ (B ∩ shift^[k] ⁻¹' E) = 2^-k μ E`; so a
 shift-invariant `S` satisfies `μ.restrict S = μ S • μ`, hence `μ S = μ S ^ 2`.
+
+`Collatz/Bernoulli.lean` identifies `(ℤ_[2], μ, T)` with the Bernoulli shift: the parity
+sequence `paritySeq x = fun i => (T^i x is odd)` is a measure-preserving bijection onto
+`ℕ → Bool` with the product of fair coins, with a measure-preserving inverse:
+
+```lean
+theorem paritySeq_measurePreserving : MeasurePreserving paritySeq μ bernoulli
+theorem paritySeq_bijective : Function.Bijective paritySeq
+theorem paritySeq_T (x : ℤ_[2]) : paritySeq (T x) = fun i => paritySeq x (i + 1)
+```
 
 ## Stopping times (`Collatz/StoppingTime.lean`)
 
