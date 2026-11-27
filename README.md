@@ -22,6 +22,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Terras.lean` | Parity vector bijection and Terras' density theorem |
 | `Collatz/Korec.lean` | Density form of Terras' theorem; Korec's theorem |
 | `Collatz/Lagarias.lean` | The 3x+1 conjugacy map at every finite level |
+| `Collatz/TwoAdic.lean` | `T` on `ℤ_[2]`; Lagarias' conjugacy map as an isometric bijection |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -93,8 +94,15 @@ theorem parityVec_compat (k n : ℕ) : parityVec (k + 1) n % 2 ^ k = parityVec k
 theorem parityVec_kstepT (k n : ℕ) : parityVec k (kstepT n) = parityVec (k + 1) n / 2
 ```
 
-Together these say that `Q_∞` is a 2-adic isometry onto `ℤ₂` with `Q_∞ ∘ T = shift ∘ Q_∞`.
-The 2-adic map itself is not constructed here.
+`Collatz/TwoAdic.lean` builds the 2-adic version: `T x = (x + par x * (2x + 1)) / 2` on
+`ℤ_[2]` (extending `kstepT`, `T_natCast`) and `Q x = ∑' i, par (T^[i] x) * 2^i`:
+
+```lean
+noncomputable def Qequiv : ℤ_[2] ≃ᵢ ℤ_[2]       -- Q is an isometric bijection
+theorem Qequiv_conj (x : ℤ_[2]) : Qequiv (T x) = shift (Qequiv x)
+```
+
+so `T` on `ℤ₂` is conjugate to the shift `y ↦ (y - par y) / 2`.
 
 ## Large verification (`CollatzBig`)
 

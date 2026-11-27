@@ -10,3 +10,4 @@ import Collatz.CycleBound
 import Collatz.Terras
 import Collatz.Korec
 import Collatz.Lagarias
+import Collatz.TwoAdic
