@@ -1,1 +1,1 @@
-import CollatzBig.All
+import CollatzBig.Bridge

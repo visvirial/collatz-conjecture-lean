@@ -17,3 +17,4 @@ import Collatz.Haar
 import Collatz.Ergodic
 import Collatz.Bernoulli
 import Collatz.LLN
+import Collatz.NatCycles

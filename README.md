@@ -29,6 +29,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Ergodic.lean` | `T` on `ℤ_[2]` is ergodic |
 | `Collatz/Bernoulli.lean` | `T` on `ℤ_[2]` is isomorphic to the Bernoulli shift |
 | `Collatz/LLN.lean` | Strong law of large numbers for the parities on `ℤ_[2]` |
+| `Collatz/NatCycles.lean` | Integer periodic points of the 2-adic map are Collatz cycles |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -116,6 +117,10 @@ theorem card_periodic {p : ℕ} (hp : 1 ≤ p) : Nat.card {x : ℤ_[2] // T^[p] 
 theorem periodic_rational {p : ℕ} (hp : 1 ≤ p) {x : ℤ_[2]} (hx : T^[p] x = x) :
     ∃ a b : ℤ, Odd b ∧ (b : ℤ_[2]) * x = a
 ```
+
+A positive integer among them that does not reach `1` is a Collatz cycle of length `≤ 2p`
+(`Collatz/NatCycles.lean`), so its period is at least `53`, and at least `102539` with the
+2^32 bound (`CollatzBig/Bridge.lean`, compiled with `lean -o` after `CollatzBig.All`).
 
 `Collatz/Haar.lean` equips `ℤ_[2]` with its Haar probability measure `μ`
 (`μ (closedBall a (2^-k)) = 2^-k`) and shows that `T` preserves it:
