@@ -18,6 +18,8 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Cycle.lean` | Constraints on nontrivial cycles |
 | `Collatz/Kernel.lean` | Kernel-friendly checkers (`resCheck`, `kall`, ...) with soundness proofs |
 | `Collatz/CycleBound.lean` | Cheap cycle exponent check via rational bounds on `log₂ 3` |
+| `Collatz/Defs.lean` | Mathlib-free computational definitions evaluated by the kernel |
+| `Collatz/Terras.lean` | Parity vector bijection and Terras' density theorem |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -44,6 +46,23 @@ theorem two_pow_le (hm : ∀ odd i, m ≤ xᵢ) : m ^ b * 2 ^ a ≤ (3 * m + 1) 
 Combined with the verification of all `n < 1024`, any cycle not containing `1` has
 at least 41 odd steps, at least 65 even steps, and length at least 106
 (`odds_card_ge`, `evens_card_ge`, `cycle_length_ge`).
+
+## Terras' theorem (`Collatz/Terras.lean`)
+
+With the accelerated map `T n = n / 2` or `(3n + 1) / 2`:
+
+```lean
+-- the first k parities give a bijection between residues mod 2^k and parity vectors
+theorem parity_bijective (k : ℕ) :
+    Function.Bijective (fun r : Fin (2 ^ k) => fun i : Fin k => decide (kstepT^[i] r % 2 = 1))
+-- almost every integer descends: the exceptions have density 0
+theorem almost_all_descend (q : ℕ) : ∃ N0, ∀ N ≥ N0,
+    q * ((range N).filter (fun n => ¬ Descends n)).card ≤ N
+```
+
+The proof counts residues by their number `s` of odd steps (`∑ a^s b^(k-s) = (a+b)^k`):
+a class with `3^s < 2^k` descends for all `n ≥ 8^k`, and with `a = 7, b = 4` at most a
+proportion `(121/128)^j` of the classes mod `2^(2j)` have `3^s ≥ 2^(2j)`.
 
 ## Large verification (`CollatzBig`)
 
