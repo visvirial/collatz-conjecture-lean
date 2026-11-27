@@ -24,6 +24,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Lagarias.lean` | The 3x+1 conjugacy map at every finite level |
 | `Collatz/TwoAdic.lean` | `T` on `ℤ_[2]`; Lagarias' conjugacy map as an isometric bijection |
 | `Collatz/Periodic.lean` | Periodic points of the 2-adic map: count and rationality |
+| `Collatz/StoppingTime.lean` | Exact density of integers with stopping time `≤ k` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -111,6 +112,21 @@ theorem card_periodic {p : ℕ} (hp : 1 ≤ p) : Nat.card {x : ℤ_[2] // T^[p] 
 theorem periodic_rational {p : ℕ} (hp : 1 ≤ p) {x : ℤ_[2]} (hx : T^[p] x = x) :
     ∃ a b : ℤ, Odd b ∧ (b : ℤ_[2]) * x = a
 ```
+
+## Stopping times (`Collatz/StoppingTime.lean`)
+
+The integers with stopping time `≤ k` (`T^j n < n` for some `1 ≤ j ≤ k`) have natural density
+exactly `#(goodSet k) / 2^k`, where `goodSet k` is the set of residues mod `2^k` with
+coefficient stopping time `≤ k` (`3^(s_j r) < 2^j` for some `1 ≤ j ≤ k`):
+
+```lean
+theorem density_stopsBy (k : ℕ) : Tendsto
+    (fun N => #{n ∈ range N | ∃ j ∈ Icc 1 k, kstepT^[j] n < n} / (N : ℝ)) atTop
+    (𝓝 (#(goodSet k) / 2 ^ k))
+theorem goodSet_card_four : (goodSet 4).card = 13   -- densities 1/2, 3/4, 3/4, 13/16, ...
+```
+
+The two notions agree for every `n ≥ 3^k` (`stopsBy_imp`, `imp_stopsBy`).
 
 ## Large verification (`CollatzBig`)
 

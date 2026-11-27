@@ -12,3 +12,4 @@ import Collatz.Korec
 import Collatz.Lagarias
 import Collatz.TwoAdic
 import Collatz.Periodic
+import Collatz.StoppingTime
