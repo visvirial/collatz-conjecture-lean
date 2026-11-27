@@ -13,6 +13,7 @@ import Collatz.Lagarias
 import Collatz.TwoAdic
 import Collatz.Periodic
 import Collatz.StoppingTime
+import Collatz.StoppingDist
 import Collatz.Haar
 import Collatz.Ergodic
 import Collatz.Bernoulli
@@ -20,3 +21,5 @@ import Collatz.LLN
 import Collatz.NatCycles
 import Collatz.Crandall
 import Collatz.Krasikov
+import Collatz.CoeffStopDefs
+import Collatz.CoeffStop

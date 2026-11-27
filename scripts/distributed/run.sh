@@ -8,7 +8,7 @@ set -e
 W=$1; shift
 D=$(cd "$(dirname "$0")" && pwd)
 PROJ=${PROJ:-$(cd "$D/../.." && pwd)}
-mkdir -p "$W/out"; : > "$W/log"; touch "$W/queue.lock"
+mkdir -p "$W/out" "$PROJ/.lake/build/lib/lean/CollatzBig"; : > "$W/log"; touch "$W/queue.lock"
 (cd "$PROJ/CollatzBig" && ls Res*.lean Cyc*.lean | sed 's/\.lean$//') > "$W/queue"
 echo "$(wc -l < "$W/queue") jobs"
 id=0

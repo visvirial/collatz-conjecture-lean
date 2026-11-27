@@ -34,7 +34,7 @@ B = first_failing_b(N)
 root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 outdir = os.path.join(root, "CollatzBig")
 os.makedirs(outdir, exist_ok=True)
-# remove only generated files (Bridge.lean and Audit.lean are hand-written)
+# remove only generated files (Bridge, CoeffStop, Cst*, Audit are hand-written)
 for f in os.listdir(outdir):
     if f.endswith(".lean") and (f.startswith("Res") or f.startswith("Cyc") or f == "All.lean"):
         os.remove(os.path.join(outdir, f))

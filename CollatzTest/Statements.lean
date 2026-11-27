@@ -38,6 +38,8 @@ example : Ergodic TwoAdic.T TwoAdic.μ := TwoAdic.T_ergodic
 example {n p : ℕ} (hn : 1 ≤ n) (hp : 1 ≤ p) (h : TwoAdic.T^[p] (n : ℤ_[2]) = n)
     (hnr : ¬ ReachesOne n) : 65 ≤ p := natCast_periodic_ge hn hp h hnr
 
+example : (goodSet 100).card = 2 ^ 100 - 302560669500543257546172187 := goodSet_card_hundred
+
 /-! Sanity checks on the definitions. -/
 
 example : ReachesOne 27 := ⟨111, by decide +kernel⟩

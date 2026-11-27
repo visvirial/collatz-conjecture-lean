@@ -1,4 +1,5 @@
 import CollatzBig.Bridge
+import CollatzBig.CoeffStop
 
 /-! Axiom check for the 2^32 results (compiled by `scripts/assemble_big.sh`). -/
 
@@ -13,3 +14,9 @@ import CollatzBig.Bridge
 
 /-- info: 'CollatzBig.natCast_periodic_ge' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms CollatzBig.natCast_periodic_ge
+
+/-- info: 'CollatzBig.stops_at_coeff_stop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms CollatzBig.stops_at_coeff_stop
+
+/-- info: 'CollatzBig.stopsBy_iff_goodSet' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms CollatzBig.stopsBy_iff_goodSet

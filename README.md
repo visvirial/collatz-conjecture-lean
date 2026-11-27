@@ -32,6 +32,8 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/NatCycles.lean` | Integer periodic points of the 2-adic map are Collatz cycles |
 | `Collatz/Crandall.lean` | `N^c ≤ 2 #{n ≤ N reaching 1}` with `c = log 2 / log 86 ≈ 0.156` |
 | `Collatz/Krasikov.lean` | At least `κ N^(3/7)` integers `≤ N` reach `1` |
+| `Collatz/StoppingDist.lean` | Exact count of coefficient stopping times for every `k` (`#goodSet 100`) |
+| `Collatz/CoeffStop.lean` | Stopping time = coefficient stopping time from tables; bounded descent |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -181,6 +183,31 @@ theorem goodSet_card_four : (goodSet 4).card = 13   -- densities 1/2, 3/4, 3/4, 
 ```
 
 The two notions agree for every `n ≥ 3^k` (`stopsBy_imp`, `imp_stopsBy`).
+
+`Collatz/StoppingDist.lean` computes `#goodSet k` exactly for every `k` by a recursion over the
+number of odd steps (pairing `r` with `2^k + r`), checked in the kernel:
+
+```lean
+theorem goodSet_card_add (k : ℕ) : #(goodSet k) + ∑ s ∈ range (k + 1), (aliveRow k).getD s 0 = 2 ^ k
+theorem goodSet_card_hundred : #(goodSet 100) = 2 ^ 100 - 302560669500543257546172187
+```
+
+With the 2^32 verification, `CollatzBig/CoeffStop.lean` proves Terras' coefficient stopping time
+conjecture up to level `125742`: if `3^(s_j n) < 2^j` for some `j < 125743` then `n ≥ 2` drops
+below itself within `j` steps. So for `k < 125743` the integers with stopping time `≤ k` are
+exactly the residue classes of `goodSet k`, with no exceptions:
+
+```lean
+theorem CollatzBig.stops_at_coeff_stop (hn : 2 ≤ n) (hj : 1 ≤ j) (hJ : j < 125743)
+    (h : 3 ^ oddCount j n < 2 ^ j) : ∃ i, 1 ≤ i ∧ i ≤ j ∧ kstepT^[i] n < n
+theorem CollatzBig.stopsBy_iff_goodSet (hk : k < 125743) (hn : 2 ≤ n) :
+    (∃ j ∈ Icc 1 k, kstepT^[j] n < n) ↔ n % 2 ^ k ∈ goodSet k
+```
+
+If `n` has not dropped below itself in `j` steps then `2^j n^s ≤ (3n+1)^s`, the cycle inequality,
+which `cycCheck2 (2^32)` rules out for `s < 79335` when `n ≥ 2^32`. Below `2^32` the
+verification bounds the stopping time by `1000`, and `cycCheck2 (2^17)` rules out `s ≤ 630`
+for `n ≥ 2^17`; the `n < 2^17` are checked directly (`CollatzBig/Cst0`-`Cst3`).
 
 ## Many integers reach 1 (`Collatz/Crandall.lean`)
 
