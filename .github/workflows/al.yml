@@ -1,0 +1,135 @@
+name: Applegate-Lagarias kernel search
+
+# Re-runs the Applegate-Lagarias search in the kernel for ratio P/Q (Collatz/LongStopAL.lean):
+# the committed prefix tree with per-chunk band hints (data/al/tree-P-Q.txt.xz, from
+# scripts/al_vec.c in TREE mode) is turned into Lean modules by scripts/gen_al.py, the Mathlib-free
+# chunk modules are checked by `decide +kernel` on many runners, and the assembly combines them into
+# `long_stopping_AL_P_Q` with an axiom audit. Hints only steer the search; any hint is sound.
+
+on:
+  workflow_dispatch:
+    inputs:
+      p:
+        description: "ratio numerator P"
+        required: true
+        default: "28"
+      q:
+        description: "ratio denominator Q"
+        required: true
+        default: "59"
+      shards:
+        description: "number of chunk jobs (at most 256)"
+        required: true
+        default: "100"
+      budget:
+        description: "kernel steps per chunk module"
+        required: true
+        default: "2000000"
+
+env:
+  P: ${{ inputs.p }}
+  Q: ${{ inputs.q }}
+  TAG: T${{ inputs.p }}_${{ inputs.q }}
+  SHARDS: ${{ inputs.shards }}
+  BUDGET: ${{ inputs.budget }}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.s.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate the Lean modules
+        run: |
+          python3 scripts/gen_al.py data/al/tree-$P-$Q.txt.xz $P $Q gen $TAG $BUDGET 1000
+          tar cJf gen.tar.xz gen
+          sha256sum gen.tar.xz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gen
+          path: gen.tar.xz
+          retention-days: 7
+      - id: s
+        run: echo "shards=$(jq -nc "[range($SHARDS)]")" >> "$GITHUB_OUTPUT"
+
+  chunks:
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.generate.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: gen
+      - name: Install Lean
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain "$(cat lean-toolchain)"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Select this shard and compute its cache key
+        id: key
+        run: |
+          tar xJf gen.tar.xz
+          mkdir -p core/Collatz/LSA out
+          lean -o core/Collatz/LSA/Basic.olean Collatz/LSA/Basic.lean
+          # the same deterministic assignment as scripts/al_build.sh
+          grep -E '^[^ ]*\.K[0-9]+ ' gen/ALGen/$TAG/modules.txt | sort -k2,2nr -k1,1 \
+            | awk -v n="$SHARDS" -v s="${{ matrix.shard }}" '
+              { best = 0; for (i = 1; i < n; i++) if (load[i] < load[best]) best = i;
+                load[best] += $2 + 1000000; if (best == s) print $1 }' > mine.txt
+          h=$(cat lean-toolchain Collatz/LSA/Basic.lean \
+            $(sed 's|\.|/|g; s|^|gen/|; s|$|.lean|' mine.txt) | sha256sum | cut -c1-40)
+          echo "key=al-v1-$TAG-$h" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: out
+          key: ${{ steps.key.outputs.key }}
+      - name: Check the chunk modules of this shard
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: AL_LEAN_PATH=$PWD/core scripts/al_build.sh gen $TAG out 4 K ${{ matrix.shard }} $SHARDS
+      - uses: actions/cache/save@v4
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: out
+          key: ${{ steps.key.outputs.key }}
+      - name: Check this shard's oleans
+        run: while read -r m; do test -s "out/$(echo "$m" | tr . /).olean"; done < mine.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: al-${{ matrix.shard }}
+          path: out/ALGen/${{ env.TAG }}/*.olean
+          retention-days: 7
+
+  assemble:
+    needs: chunks
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: gen
+      - name: Install Lean
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain "$(cat lean-toolchain)"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - name: Build the library up to Collatz.LongStopAL
+        run: |
+          lake exe cache get
+          lake build Collatz.LongStopAL
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: al-*
+          merge-multiple: true
+          path: out/ALGen/${{ env.TAG }}
+      - name: Assemble and audit
+        run: |
+          tar xJf gen.tar.xz
+          scripts/al_build.sh gen $TAG out 4 A

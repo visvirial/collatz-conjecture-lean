@@ -8,7 +8,8 @@
 //   the hint is T_w = max over the chunk's codewords of these (+ slack).
 //   Stage 2: the kernel mirror (early exit, list order) with the per-level bands T_w.
 //   Env OFFSET=o starts at chunk o (to split a full run over machines); HINTS=1 prints hints;
-//   ADAPT="W0 mmax" refines chunks whose kernel work exceeds W0 (see adapt()).
+//   ADAPT="W0 mmax" refines chunks whose kernel work exceeds W0 (see adapt()); TREE="W0 mmax"
+//   prints the whole prefix tree with per-leaf hints (see tree()).
 //   Prints totals scaled by `sample`: stage-1 work and codewords, stage-2 kernel steps,
 //   codewords, failures, and a histogram of stage-2 chunk work.
 #include <stdio.h>
@@ -146,7 +147,85 @@ static void adapt(u64 r, int m, Ad *a) {
   }
 }
 
+// TREE mode: the complete prefix tree with per-leaf hints, for scripts/al_hints.py.
+// Prints `S r m` for a split class and `L r m ok work T_1,T_2,...` for a leaf (a class whose
+// kernel check takes at most W0 steps, or a class closed at its own level). Classes above level
+// `split` are handled serially (printed only when OFFSET = 0), the classes at level `split` are the
+// parallel tasks (every `sample`-th from OFFSET).
+static void emitLeaf(u64 r, int m, int *tb, int ok2, u64 work) {
+  #pragma omp critical
+  {
+    printf("L %llu %d %d %llu ", r, m, ok2, work);
+    for (int v = 1; v < Lmax; v++) printf("%d,", tb[v]);
+    printf("\n");
+  }
+}
+static void tree(u64 r, int m, Ad *a) {
+  St s = {0}; Ent *f;
+  int n = frontier(r, m, &f, &s, 1);
+  int tb[LW];
+  if (n == -1) { // closed at this level: the closing path's bands
+    free(f);
+    for (int v = 0; v < LW; v++) tb[v] = s.Tv[v];
+    St s2 = {0}; int ok2 = cover2(r, m, tb, &s2);
+    a->w1 += s.work; a->w2 += s2.work; a->chunks++; a->fail += !ok2;
+    emitLeaf(r, m, tb, ok2, s2.work);
+    return;
+  }
+  int ok = cover(f, n, m - 1, &s, 1);
+  free(f);
+  a->w1 += s.work;
+  for (int v = 0; v < LW; v++) tb[v] = s.Tv[v];
+  St s2 = {0}; int ok2 = cover2(r, m, tb, &s2);
+  if (s2.work > W0 && m < mmax) {
+    #pragma omp critical
+    printf("S %llu %d\n", r, m);
+    for (int j = 0; j < 3; j++) tree(r + j * P3[m], m + 1, a);
+    return;
+  }
+  a->w2 += s2.work; a->cw += s2.cw; a->chunks++; a->fail += !ok || !ok2;
+  if (s2.work > W0) a->big++;
+  emitLeaf(r, m, tb, ok2, s2.work);
+}
+static u64 *tk; static int ntk, tkcap;
+static void top(u64 r, int m, int emit, Ad *a) {
+  St s = {0}; Ent *f;
+  int n = frontier(r, m, &f, &s, 1);
+  free(f);
+  if (n == -1) {
+    if (emit) { int tb[LW]; for (int v = 0; v < LW; v++) tb[v] = s.Tv[v];
+      St s2 = {0}; int ok2 = cover2(r, m, tb, &s2); a->w2 += s2.work; a->chunks++; a->fail += !ok2;
+      emitLeaf(r, m, tb, ok2, s2.work); }
+    return;
+  }
+  if (m == split) { if (ntk == tkcap) { tkcap = tkcap ? 2 * tkcap : 1024; tk = realloc(tk, 8 * tkcap); } tk[ntk++] = r; return; }
+  if (emit) printf("S %llu %d\n", r, m);
+  for (int j = 0; j < 3; j++) top(r + j * P3[m], m + 1, emit, a);
+}
+
 int main(int argc, char **argv) {
+  if (getenv("TREE")) { // TREE="W0 mmax": ./al_vec P Q D split Lmax Tbig sample
+    P = atoi(argv[1]); Q = atoi(argv[2]); D = atoi(argv[3]); split = atoi(argv[4]); Lmax = atoi(argv[5]);
+    Tbig = atoi(argv[6]); int sample = atoi(argv[7]);
+    sscanf(getenv("TREE"), "%llu %d", &W0, &mmax);
+    P3[0] = 1; for (int i = 1; i <= 40; i++) P3[i] = P3[i - 1] * 3;
+    int off = getenv("OFFSET") ? atoi(getenv("OFFSET")) : 0;
+    Ad tot = {0}; double t0 = omp_get_wtime();
+    printf("# TREE P=%d Q=%d D=%d split=%d Lmax=%d Tbig=%d W0=%llu mmax=%d sample=%d offset=%d\n",
+           P, Q, D, split, Lmax, Tbig, W0, mmax, sample, off);
+    top(1, 1, off == 0, &tot); top(2, 1, off == 0, &tot);
+    #pragma omp parallel
+    {
+      Ad a = {0};
+      #pragma omp for schedule(dynamic, 1)
+      for (int c = off; c < ntk; c += sample) tree(tk[c], split, &a);
+      #pragma omp critical
+      { tot.w1 += a.w1; tot.w2 += a.w2; tot.cw += a.cw; tot.chunks += a.chunks; tot.big += a.big; tot.fail += a.fail; }
+    }
+    printf("# done tasks=%d stage1=%llu kernel=%llu leaves=%llu overW0=%llu fail=%llu time=%.0fs\n",
+           ntk, tot.w1, tot.w2, tot.chunks, tot.big, tot.fail, omp_get_wtime() - t0);
+    return tot.fail ? 1 : 0;
+  }
   if (getenv("ADAPT")) { // ADAPT="W0 mmax": ./al_vec P Q D split Lmax Tbig sample
     P = atoi(argv[1]); Q = atoi(argv[2]); D = atoi(argv[3]); split = atoi(argv[4]); Lmax = atoi(argv[5]);
     Tbig = atoi(argv[6]); int sample = atoi(argv[7]);

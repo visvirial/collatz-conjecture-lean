@@ -290,6 +290,12 @@ theorem chunk_sound {P Q F r0 : ℕ} {js Ts : List ℕ} (hr0 : r0 = 1 ∨ r0 = 2
   refine ⟨0, 0, by simp, fun t => ?_⟩
   simp [oddCount]
 
+/-- `chunk_sound` with the digit condition as a `Bool` (provable by `rfl`), for generated files. -/
+theorem chunk_sound' {P Q F r0 : ℕ} {js Ts : List ℕ} (hr0 : r0 = 1 ∨ r0 = 2)
+    (hjs : js.all (fun j => Nat.blt j 3) = true) (h : chunk P Q F r0 js Ts = true) :
+    Covered P Q (cls r0 3 js).1 (cls r0 3 js).2 :=
+  chunk_sound hr0 (fun j hj => by simpa [Nat.blt_eq] using List.all_eq_true.mp hjs j hj) h
+
 /-! ## Long stopping times -/
 
 /-- Iterating codeword paths backwards from `4`. -/
