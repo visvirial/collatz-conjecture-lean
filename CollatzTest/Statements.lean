@@ -40,6 +40,9 @@ example {n p : ℕ} (hn : 1 ≤ n) (hp : 1 ≤ p) (h : TwoAdic.T^[p] (n : ℤ_[2
 
 example : (goodSet 100).card = 2 ^ 100 - 302560669500543257546172187 := goodSet_card_hundred
 
+example (k : ℕ) : 1 - ((goodSet k).card : ℝ) / 2 ^ k ≤
+    Real.exp (-((Real.log 2 - Real.binEntropy theta) * k)) := density_tail_le k
+
 /-! Sanity checks on the definitions. -/
 
 example : ReachesOne 27 := ⟨111, by decide +kernel⟩

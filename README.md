@@ -33,6 +33,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Crandall.lean` | `N^c ≤ 2 #{n ≤ N reaching 1}` with `c = log 2 / log 86 ≈ 0.156` |
 | `Collatz/Krasikov.lean` | At least `κ N^(3/7)` integers `≤ N` reach `1` |
 | `Collatz/StoppingDist.lean` | Exact count of coefficient stopping times for every `k` (`#goodSet 100`) |
+| `Collatz/TerrasD.lean` | Exponential decay of the stopping time tail (Lagarias' Theorem D) |
 | `Collatz/CoeffStop.lean` | Stopping time = coefficient stopping time from tables; bounded descent |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
@@ -191,6 +192,19 @@ number of odd steps (pairing `r` with `2^k + r`), checked in the kernel:
 theorem goodSet_card_add (k : ℕ) : #(goodSet k) + ∑ s ∈ range (k + 1), (aliveRow k).getD s 0 = 2 ^ k
 theorem goodSet_card_hundred : #(goodSet 100) = 2 ^ 100 - 302560669500543257546172187
 ```
+
+`Collatz/TerrasD.lean` bounds the tail by the binary entropy of `θ = log 2 / log 3`
+(Lagarias 1985, Theorem D): a residue that has not stopped after `k` steps has at least `θ k`
+odd steps, and weighting residues by `θ^s (1-θ)^(k-s)` gives
+
+```lean
+theorem badSet_card_le (k : ℕ) : (#(badSet k) : ℝ) ≤ Real.exp (k * Real.binEntropy theta)
+theorem density_tail_le (k : ℕ) :
+    1 - #(goodSet k) / 2 ^ k ≤ Real.exp (-((Real.log 2 - Real.binEntropy theta) * k))
+```
+
+so the density of integers with stopping time `> k` is at most about `2^(-0.05 k)`
+(`H(θ) / log 2 ≈ 0.94996`, and `binEntropy_theta_lt : binEntropy theta < log 2`).
 
 With the 2^32 verification, `CollatzBig/CoeffStop.lean` proves Terras' coefficient stopping time
 conjecture up to level `125742`: if `3^(s_j n) < 2^j` for some `j < 125743` then `n ≥ 2` drops
