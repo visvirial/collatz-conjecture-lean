@@ -20,6 +20,7 @@ import Collatz.LongStopGen
 import Collatz.LongStop12
 import Collatz.LongStopFast
 import Collatz.LongStop15
+import Collatz.LongStopAL
 import Collatz.Haar
 import Collatz.Ergodic
 import Collatz.Bernoulli
