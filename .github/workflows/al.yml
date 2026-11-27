@@ -5,6 +5,11 @@ name: Applegate-Lagarias kernel search
 # scripts/al_vec.c in TREE mode) is turned into Lean modules by scripts/gen_al.py, the Mathlib-free
 # chunk modules are checked by `decide +kernel` on many runners, and the assembly combines them into
 # `long_stopping_AL_P_Q` with an axiom audit. Hints only steer the search; any hint is sound.
+#
+# A large check can be split over several runs (at most 256 jobs per run, 6 hours per job): every
+# run uses the same `shards` (the size of the partition) and checks shards first..first+count-1;
+# the last run sets `runs` to the ids of the earlier runs, whose `al-*` artifacts it downloads
+# before the assembly. Runs with `assemble` off only check their shards.
 
 on:
   workflow_dispatch:
@@ -21,6 +26,22 @@ on:
         description: "number of chunk jobs (at most 256)"
         required: true
         default: "100"
+      first:
+        description: "first shard checked by this run"
+        required: true
+        default: "0"
+      count:
+        description: "number of shards checked by this run (at most 256; 0 = assembly only)"
+        required: true
+        default: "100"
+      assemble:
+        description: "assemble and audit at the end of this run"
+        type: boolean
+        default: true
+      runs:
+        description: "ids of earlier runs (space separated) whose shard oleans the assembly uses"
+        required: false
+        default: ""
       budget:
         description: "kernel steps per chunk module"
         required: true
@@ -32,6 +53,10 @@ env:
   TAG: T${{ inputs.p }}_${{ inputs.q }}
   SHARDS: ${{ inputs.shards }}
   BUDGET: ${{ inputs.budget }}
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   generate:
@@ -51,10 +76,16 @@ jobs:
           path: gen.tar.xz
           retention-days: 7
       - id: s
-        run: echo "shards=$(jq -nc "[range($SHARDS)]")" >> "$GITHUB_OUTPUT"
+        env:
+          FIRST: ${{ inputs.first }}
+          COUNT: ${{ inputs.count }}
+        run: |
+          echo "shards=$(jq -nc --argjson f "$FIRST" --argjson c "$COUNT" --argjson n "$SHARDS" \
+            '[range($f; [$f + $c, $n] | min)]')" >> "$GITHUB_OUTPUT"
 
   chunks:
     needs: generate
+    if: needs.generate.outputs.shards != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 350
     strategy:
@@ -104,10 +135,13 @@ jobs:
         with:
           name: al-${{ matrix.shard }}
           path: out/ALGen/${{ env.TAG }}/*.olean
-          retention-days: 7
+          retention-days: 30
 
   assemble:
-    needs: chunks
+    needs: [generate, chunks]
+    if: >-
+      always() && inputs.assemble && needs.generate.result == 'success' &&
+      (needs.chunks.result == 'success' || needs.chunks.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
@@ -125,10 +159,23 @@ jobs:
           lake exe cache get
           lake build Collatz.LongStopAL
       - uses: actions/download-artifact@v4
+        if: needs.chunks.result == 'success'
         with:
           pattern: al-*
           merge-multiple: true
           path: out/ALGen/${{ env.TAG }}
+      - name: Download the shard oleans of the earlier runs
+        if: inputs.runs != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUNS: ${{ inputs.runs }}
+        run: |
+          mkdir -p "out/ALGen/$TAG"
+          for id in $RUNS; do
+            gh run download "$id" -R "$GITHUB_REPOSITORY" -p 'al-*' -D "dl/$id"
+          done
+          find dl -name '*.olean' -exec mv -n -t "out/ALGen/$TAG" {} +
+          ls "out/ALGen/$TAG" | wc -l
       - name: Assemble and audit
         run: |
           tar xJf gen.tar.xz
