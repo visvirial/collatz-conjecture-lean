@@ -30,6 +30,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/Bernoulli.lean` | `T` on `ℤ_[2]` is isomorphic to the Bernoulli shift |
 | `Collatz/LLN.lean` | Strong law of large numbers for the parities on `ℤ_[2]` |
 | `Collatz/NatCycles.lean` | Integer periodic points of the 2-adic map are Collatz cycles |
+| `Collatz/Crandall.lean` | At least `N^0.155` integers `≤ N` reach `1` |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -178,6 +179,20 @@ theorem goodSet_card_four : (goodSet 4).card = 13   -- densities 1/2, 3/4, 3/4, 
 ```
 
 The two notions agree for every `n ≥ 3^k` (`stopsBy_imp`, `imp_stopsBy`).
+
+## Many integers reach 1 (`Collatz/Crandall.lean`)
+
+Going backwards from `1`, an odd `m` with `2^a m ≡ 1 (mod 3)` has the odd predecessor
+`(2^a m - 1) / 3`. Working mod `9`, every odd `m` with `3 ∤ m` has two exponents `3 ≤ a ≤ 8`
+whose predecessors are again prime to `3`, so the backward tree branches at every level:
+
+```lean
+theorem card_reachesOne_ge (d : ℕ) : 2 ^ d ≤ #{n ≤ 86 ^ d | ReachesOne n}
+theorem card_reachesOne_ge_rpow (N : ℕ) (hN : 1 ≤ N) :
+    (N : ℝ) ^ (Real.log 2 / Real.log 86) ≤ 2 * #{n ≤ N | ReachesOne n}
+```
+
+(Crandall 1978 proved such a bound for some `c > 0`; Krasikov and Lagarias reached `c = 0.84`.)
 
 ## Large verification (`CollatzBig`)
 
