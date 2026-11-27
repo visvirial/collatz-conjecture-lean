@@ -39,3 +39,4 @@ import Collatz.CoeffStopDefs
 import Collatz.CoeffStop
 import Collatz.ExtDefs
 import Collatz.ExtKernel
+import Collatz.RozierTerracolParadox
