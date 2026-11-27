@@ -318,6 +318,16 @@ scripts/distributed/watch.sh WORKDIR                          # completion, fail
 scripts/assemble_big.sh                                       # All, Bridge, and the axiom audit Audit.lean
 ```
 
+The extension `CollatzBig/Ext*.lean` (`scripts/gen_ext.py`, `scripts/assemble_ext.sh`) adds the range
+`256 ≤ m < 434` with a sieve over residues mod `2^20` and reaches the ceiling of the cycle method:
+
+```lean
+theorem CollatzBig.Ext.descends_below : ∀ n, 2 ≤ n → n < 7281311744 → Descends n
+theorem CollatzBig.Ext.cycle_length_ge (hc : IsCycle n p) (hnr : ¬ ReachesOne n) : 492531 ≤ p
+theorem CollatzBig.Ext.kstepT_period_ge ... : 301994 ≤ p            -- accelerated convention
+theorem CollatzBig.Ext.stopsBy_iff_goodSet (hk : k < 301994) (hn : 2 ≤ n) : ...
+```
+
 `CollatzBig` is deliberately not a Lake target: `lake build` would recompile all chunks
 (about 4.5 GB of memory each). `CollatzBig/PROVENANCE.md` records the last clean rebuild (6008 chunks from a `git archive`,
 53.9 CPU-hours, assembled and axiom-audited).
