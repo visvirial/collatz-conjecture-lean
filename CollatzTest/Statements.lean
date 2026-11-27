@@ -56,6 +56,56 @@ example {A B : Set ℤ_[2]} (hA : MeasurableSet A) (hB : MeasurableSet B) :
 example {n k l : ℕ} (hc : IsCircuit n k l) (hk : k < 1636) : n = 1 ∧ k = 1 ∧ l = 1 :=
   no_circuit_lt_1636 hc hk
 
+/-! More headline statements. -/
+
+example (k : ℕ) :
+    Function.Bijective (fun r : Fin (2 ^ k) => fun i : Fin k => decide (kstepT^[i] r % 2 = 1)) :=
+  parity_bijective k
+
+open Classical in
+example : Filter.Tendsto (fun N : ℕ => ((((range N).filter (fun n => ¬ Descends n)).card : ℕ) : ℝ) / N)
+    Filter.atTop (nhds 0) := density_not_descends
+
+open Classical in
+example (k : ℕ) : Filter.Tendsto
+    (fun N : ℕ => ((((range N).filter (fun n => ∃ j ∈ Icc 1 k, kstepT^[j] n < n)).card : ℕ) : ℝ) / N)
+    Filter.atTop (nhds (((goodSet k).card : ℝ) / 2 ^ k)) := density_stopsBy k
+
+example (k n n' : ℕ) : parityVec k n = parityVec k n' ↔ n % 2 ^ k = n' % 2 ^ k :=
+  parityVec_eq_iff k n n'
+
+example (n j : ℕ) : (evens n (j + oddCount j n)).card = j := card_evens_kstepT n j
+
+open Classical in
+example (N : ℕ) (hN : 1 ≤ N) : (N : ℝ) ^ (Real.log 2 / Real.log 86) ≤
+    2 * (((range (N + 1)).filter ReachesOne).card : ℝ) := card_reachesOne_ge_rpow N hN
+
+namespace Collatz.TwoAdic
+
+open MeasureTheory ProbabilityTheory Filter Topology
+
+example {p : ℕ} (hp : 1 ≤ p) {x : ℤ_[2]} (hx : T^[p] x = x) :
+    ∃ a b : ℤ, Odd b ∧ (b : ℤ_[2]) * x = a := periodic_rational hp hx
+example : MeasurePreserving T μ μ := T_measurePreserving
+example : MeasurePreserving paritySeq μ bernoulli := paritySeq_measurePreserving
+example : ∀ᵐ x ∂μ, Tendsto (fun n : ℕ => (oddCount2 n x : ℝ) / n) atTop (𝓝 (1 / 2)) :=
+  odd_fraction_ae
+example {Ω' : Type} {mΩ' : MeasurableSpace Ω'} {P' : Measure Ω'} [IsProbabilityMeasure P']
+    {Z : Ω' → ℝ} (hZ : HasLaw Z (gaussianReal 0 (1 / 4)) P') :
+    TendstoInDistribution (fun (n : ℕ) (x : ℤ_[2]) => ((oddCount2 n x : ℝ) - n / 2) / √n)
+      atTop Z (fun _ => μ) P' := oddCount2_clt hZ
+example : ∀ᵐ x ∂μ, ∀ k d : ℕ, d < 2 ^ k →
+    Tendsto (fun n : ℕ => ((((range n).filter (fun i => (T^[i] x).appr k = d)).card : ℕ) : ℝ) / n)
+      atTop (𝓝 ((2 : ℝ) ^ k)⁻¹) := orbit_equidistributed_mod
+example {S : Set ℤ_[2]} (hS : ∀ n, ∃ E, MeasurableSet E ∧ S = T^[n] ⁻¹' E) : μ S = 0 ∨ μ S = 1 :=
+  T_exact hS
+example {n : ℕ} (hn : 1 ≤ n) : ReachesOne n ↔ ∃ z : ℤ, (3 : ℤ_[2]) * Q (n : ℤ_[2]) = z :=
+  reachesOne_iff_three_mul_Q hn
+
+end Collatz.TwoAdic
+
+open Collatz
+
 /-! Sanity checks on the definitions. -/
 
 example : ReachesOne 27 := ⟨111, by decide +kernel⟩
