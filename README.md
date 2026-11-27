@@ -31,6 +31,8 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | Law of large numbers, central limit theorem and equidistribution mod `2^k` for 2-adic orbits | `odd_fraction_ae`, `oddCount2_clt`, `orbit_equidistributed_mod` | Lagarias 1985 (Thm K) |
 | Conjecture ⟺ `3 Q(n) ∈ ℤ` for every `n ≥ 1` | `TwoAdic.conjecture_iff_three_mul_Q` | Bernstein 1994 |
 
+A longer write-up (methods, engineering notes, references) is in [`docs/overview.md`](docs/overview.md).
+
 The `CollatzBig.*` results rest on 10263 kernel-checked chunk theorems; see
 [`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md) for the clean rebuild from `git archive`.
 
