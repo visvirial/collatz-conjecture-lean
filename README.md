@@ -2,6 +2,7 @@
 
 [![Lean Action CI](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/lean_action_ci.yml/badge.svg)](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/lean_action_ci.yml)
 [![CollatzBig (full re-verification)](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/big.yml/badge.svg)](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/big.yml)
+[![Applegate-Lagarias kernel search](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/al.yml/badge.svg)](https://github.com/visvirial/collatz-conjecture-lean/actions/workflows/al.yml)
 
 A Lean 4 + Mathlib formalization of partial results on the Collatz (3x+1) conjecture.
 
@@ -29,6 +30,11 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | Almost every `n` gets below `n^c` for every `c > log 3 / log 4` | `korec` | Korec 1994 |
 | At least `κ N^0.4848` integers `≤ N` reach 1 | `card_reachesOne_ge_rpow_krasikov` | Crandall 1978, Krasikov 1989 (method) |
 | Infinitely many `n` need `≥ 5.78 log n - c` steps to reach 1 | `long_stopping_log_fifteen` | Applegate–Lagarias 2003 (method) |
+| … `≥ 5.82 log n - c` steps, by the Applegate–Lagarias tree search run in the kernel (GitHub Actions) | `Collatz.LSA.long_stopping_AL_28_59` | Applegate–Lagarias 2003 |
+| Finitely many paradoxical sequences would imply the conjecture | `RozierTerracol.conjecture_of_finite_paradoxical` | Rozier–Terracol 2025 (Cor. 3.3) |
+| Syracuse valuation vectors: affine formula, uniqueness, exact geometric law; `Syrac(ℤ/3^k)` and its compatibility | `TaoSyracuse.affine`, `prob_syrVec_eq`, `Syrac_compat` | Tao 2022 (§1, Lemma 6.2) |
+| Explicit series for `Q⁻¹`; conjecture ⟺ `ℤ⁺ ⊆ Q⁻¹(⅓ℤ)` | `TwoAdic.bernstein_formula`, `conjecture_iff_bernstein` | Bernstein 1994 |
+| The autoconjugacy `Ω`; the solenoidal maps commuting with `T` are exactly `id`, `Ω`, `0`, `-1` | `TwoAdic.T_Ω`, `solenoidal_commute_iff` | Monks–Yazinski 2004 |
 | `T` on `ℤ₂` is conjugate to the shift by an isometric bijection `Q` | `TwoAdic.Qequiv`, `Qequiv_conj` | Lagarias 1985 (Thm L), Bernstein–Lagarias 1996 |
 | `ℤ₂` has exactly `2^p` points of period dividing `p`, all rational | `TwoAdic.card_periodic`, `periodic_rational` | cf. Lagarias 1985, Bernstein 1994 |
 | `T` preserves Haar measure, is exact, strongly mixing and Bernoulli | `T_measurePreserving`, `T_exact`, `T_mixing`, `paritySeq_measurePreserving` | Matthews–Watts 1984, Lagarias 1985 (Thms K, L), Bernstein–Lagarias 1996 |
@@ -188,6 +194,66 @@ theorem long_stopping_log_fifteen (L : ℕ) : ∃ n, 1 ≤ n ∧ kstepT^[L + 2] 
   (`Collatz/LS15/`, `scripts/longstop_pot_omp.c`, `scripts/gen_lsf.py 15 9 19 7 2187 40000`).
   The best ratios of this one-step potential grow slowly with the modulus (`3^16`: `21/44`,
   `γ ≈ 5.92`; `3^17`: `11/23`, `γ ≈ 5.96`; `scripts/longstop_value.c`).
+- `Collatz/LongStopAL.lean`, `Collatz/LSA/Basic.lean`: the Applegate–Lagarias method itself. A
+  ternary prefix tree of the `3`-adic unit classes is searched in the kernel: a class closes when
+  some backward path of length `k` with `w` odd steps has `P k ≤ Q w`, otherwise it splits
+  (`chunk_sound`, `covered_split`, `long_stopping_AL`). `scripts/al_vec.c` (`TREE` mode) finds the
+  tree and per-chunk band hints (hints only steer the search; any hint is sound), and
+  `scripts/gen_al.py` turns it into Mathlib-free chunk modules and assembly modules. For
+  `P/Q = 28/59` (`data/al/tree-28-59.txt.xz`: 132636 leaves, about `4.3·10^9` kernel steps,
+  2903 chunk modules) this gives `γ = 1/(log 2 - (28/59) log 3) ≈ 5.82`:
+
+  ```lean
+  theorem Collatz.LSA.long_stopping_AL_28_59 (N : ℕ) : ∃ n L, N ≤ L ∧ 1 ≤ n ∧
+      kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+      (59 : ℕ) * Real.log n - 2 * (28 : ℕ) * Real.log 3 ≤
+        ((59 : ℕ) * Real.log 2 - (28 : ℕ) * Real.log 3) * (L + 2 : ℕ)
+  ```
+
+  Like `CollatzBig`, the generated modules are not a Lake target: `.github/workflows/al.yml`
+  regenerates them from the committed tree, checks the chunks on parallel runners (a check can be
+  split over several runs) and assembles them with a `#guard_msgs` axiom audit. The 28/59 check
+  took 101 jobs, 22.8 runner-hours (runs 46032421992, 46032440828, 46043134239). The paper's ratio
+  `14/29` (`γ ≈ 6.143`) uses the same pipeline with a much larger tree.
+
+### Results from recent papers
+
+```lean
+-- Rozier–Terracol 2025: a paradoxical pair (j, n) has 3^(s_j(n)) < 2^j yet T^j n ≥ n
+theorem RozierTerracol.conjecture_of_finite_paradoxical
+    (h : {p : ℕ × ℕ | Paradoxical p.1 p.2}.Finite) : Conjecture
+-- Tao 2022: the Syracuse map Syr n = (3n+1)/2^ν₂(3n+1) and its valuation vector
+theorem TaoSyracuse.affine (k n : ℕ) :
+    2 ^ vsum (syrVec k n) * syracuse^[k] n = 3 ^ k * n + off (syrVec k n)
+-- Bernstein 1994: Q⁻¹ as an explicit 2-adic series
+theorem TwoAdic.conjecture_iff_bernstein :
+    Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃ m : ℤ, (n : ℤ_[2]) = Qequiv.symm (m * Ring.inverse 3)
+-- Monks–Yazinski 2004
+theorem TwoAdic.solenoidal_commute_iff (f : ℤ_[2] → ℤ_[2]) :
+    (Solenoidal f ∧ ∀ x, T (f x) = f (T x)) ↔
+      f = id ∨ f = Ω ∨ f = (fun _ => 0) ∨ f = (fun _ => -1)
+```
+
+- `Collatz/RozierTerracolParadox.lean` (O. Rozier, C. Terracol, *Paradoxical behavior in Collatz
+  sequences*, arXiv:2502.00948): the bounds of Thm 2.4
+  (`3^q n + 3^q - 2^q ≤ 2^j T^j n ≤ 3^q n + 2^(j-q)(3^q - 2^q)`), Lemma 2.5, Lemma 3.1 (windows
+  `3^a < 2^b < (1 + 1/(4N-1)) 3^a` with `a` arbitrarily large, from Dirichlet approximation of
+  `log₂ 3`), Thm 3.2 (an orbit that never drops below its start yields paradoxical pairs with
+  unboundedly many odd steps) and Cor 3.3. The paper's enumeration of the known paradoxical
+  sequences is not included.
+- `Collatz/TaoSyracuseValuation.lean` (T. Tao, *Almost all orbits of the Collatz map attain almost
+  bounded values*, Forum Math. Pi 10 (2022)): the elementary layer of the paper. The affine formula
+  for `Syr^k`, uniqueness of the valuation vector, injectivity of `a ↦ F_k(a)` (Lemma 6.2), the
+  exact count of odd `n < 2^M` with a given valuation vector (`2^(M-|a|-1)`, i.e. probability
+  `2^-|a|`), and `Syrac(ℤ/3^k)` as a `PMF` with the compatibility (1.22). The main theorem is not
+  formalized.
+- `Collatz/BernsteinFormula.lean` (D. J. Bernstein, *A non-iterative 2-adic statement of the 3N+1
+  conjecture*, Proc. AMS 121 (1994)): `Q⁻¹(∑ 2^(dᵢ)) = -∑ 2^(dᵢ) 3^(-(i+1))`, in infinite and finite
+  form, and the conjecture in Bernstein's form.
+- `Collatz/AutoconjugacyOmega.lean` (K. G. Monks, J. Yazinski, *The autoconjugacy of the 3x+1
+  function*, Discrete Math. 275 (2004)): `Ω = Q⁻¹ ∘ (x ↦ -1 - x) ∘ Q` is an isometric, Haar-measure
+  preserving involution without fixed points that commutes with `T` and flips every parity; it and
+  the identity are the only injective solenoidal maps commuting with `T`.
 
 ### The 2-adic map
 
@@ -268,7 +334,9 @@ is documented in [`CollatzBig/PROVENANCE.md`](CollatzBig/PROVENANCE.md).
 | `Collatz/Cycle.lean`, `CycleBound.lean`, `NatCycles.lean`, `Circuit.lean`, `MCycle.lean` | Cycle constraints |
 | `Collatz/Terras.lean`, `Korec.lean`, `StoppingTime.lean`, `StoppingDist.lean`, `TerrasD.lean`, `CoeffStop.lean` | Density and stopping times |
 | `Collatz/Crandall.lean`, `Krasikov.lean`, `KrasikovGen.lean`, `LongStop.lean`, `LongStopGen.lean`, `LongStop12.lean`, `LS12/`, `LongStopFast.lean`, `LSF/`, `LongStop15.lean`, `LS15/` | Integers reaching 1, long trajectories |
-| `Collatz/Lagarias.lean`, `TwoAdic.lean`, `Periodic.lean`, `Haar.lean`, `Ergodic.lean`, `Mixing.lean`, `Bernoulli.lean`, `LLN.lean`, `CLT.lean`, `Equidist.lean`, `Bernstein.lean` | The 2-adic map |
+| `Collatz/LongStopAL.lean`, `LSA/`, `data/al/` | Applegate–Lagarias tree search (trees for `.github/workflows/al.yml`) |
+| `Collatz/Lagarias.lean`, `TwoAdic.lean`, `Periodic.lean`, `Haar.lean`, `Ergodic.lean`, `Mixing.lean`, `Bernoulli.lean`, `LLN.lean`, `CLT.lean`, `Equidist.lean`, `Bernstein.lean`, `BernsteinFormula.lean`, `AutoconjugacyOmega.lean` | The 2-adic map |
+| `Collatz/RozierTerracolParadox.lean`, `TaoSyracuseValuation.lean` | Results from recent papers |
 | `CollatzTest/` | Axiom audit and headline statements (`lake test`) |
 | `CollatzBig/` | Generated chunk modules, assembly, audits, `PROVENANCE.md` |
 | `scripts/` | Generators, certificate searches, distributed build scripts |
