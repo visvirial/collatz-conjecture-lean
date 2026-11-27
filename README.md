@@ -25,6 +25,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/TwoAdic.lean` | `T` on `ℤ_[2]`; Lagarias' conjugacy map as an isometric bijection |
 | `Collatz/Periodic.lean` | Periodic points of the 2-adic map: count and rationality |
 | `Collatz/StoppingTime.lean` | Exact density of integers with stopping time `≤ k` |
+| `Collatz/Haar.lean` | `T` on `ℤ_[2]` preserves Haar measure |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -112,6 +113,17 @@ theorem card_periodic {p : ℕ} (hp : 1 ≤ p) : Nat.card {x : ℤ_[2] // T^[p] 
 theorem periodic_rational {p : ℕ} (hp : 1 ≤ p) {x : ℤ_[2]} (hx : T^[p] x = x) :
     ∃ a b : ℤ, Odd b ∧ (b : ℤ_[2]) * x = a
 ```
+
+`Collatz/Haar.lean` equips `ℤ_[2]` with its Haar probability measure `μ`
+(`μ (closedBall a (2^-k)) = 2^-k`) and shows that `T` preserves it:
+
+```lean
+theorem T_measurePreserving : MeasurePreserving T μ μ
+```
+
+The balls form a π-system generating the Borel σ-algebra; isometric bijections such as `Q`
+map balls to balls, the shift pulls a ball back to two balls of half the radius, and
+`T = Q⁻¹ ∘ shift ∘ Q`.
 
 ## Stopping times (`Collatz/StoppingTime.lean`)
 

@@ -13,3 +13,4 @@ import Collatz.Lagarias
 import Collatz.TwoAdic
 import Collatz.Periodic
 import Collatz.StoppingTime
+import Collatz.Haar
