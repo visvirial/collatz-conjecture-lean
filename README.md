@@ -20,6 +20,7 @@ standard axioms (`propext`, `Classical.choice`, `Quot.sound`). No `native_decide
 | `Collatz/CycleBound.lean` | Cheap cycle exponent check via rational bounds on `log₂ 3` |
 | `Collatz/Defs.lean` | Mathlib-free computational definitions evaluated by the kernel |
 | `Collatz/Terras.lean` | Parity vector bijection and Terras' density theorem |
+| `Collatz/Korec.lean` | Density form of Terras' theorem; Korec's theorem |
 | `CollatzBig/` | Generated chunked verification up to `2^32` (not a default target) |
 
 ## Main result
@@ -63,6 +64,21 @@ theorem almost_all_descend (q : ℕ) : ∃ N0, ∀ N ≥ N0,
 The proof counts residues by their number `s` of odd steps (`∑ a^s b^(k-s) = (a+b)^k`):
 a class with `3^s < 2^k` descends for all `n ≥ 8^k`, and with `a = 7, b = 4` at most a
 proportion `(121/128)^j` of the classes mod `2^(2j)` have `3^s ≥ 2^(2j)`.
+
+## Korec's theorem (`Collatz/Korec.lean`)
+
+```lean
+-- the proportion of n < N that never drop below n tends to 0
+theorem density_not_descends :
+    Tendsto (fun N => ((range N).filter (fun n => ¬ Descends n)).card / (N : ℝ)) atTop (𝓝 0)
+-- Korec (1994): for c > log 3 / log 4 ≈ 0.7925, almost every n reaches a value below n ^ c
+theorem korec {c : ℝ} (hc : Real.log 3 / Real.log 4 < c) (q : ℕ) : ∃ N0, ∀ N ≥ N0,
+    q * ((range N).filter (fun n => ∀ j, (n : ℝ) ^ c ≤ step^[j] n)).card ≤ N
+```
+
+For `2^t ≤ n < 2^(t+1)` with `s` odd steps among the first `t`, `T^t n < 2·3^s + (3/2)^t`.
+The second moment `∑_{r < 2^t} (2 s(r) - t)^2 = t 2^t` shows that `s ≤ t (1 + 1/L) / 2` for
+all but `L^2 2^t / t` of these `n`, and then `T^t n < n ^ c` for large `t`.
 
 ## Large verification (`CollatzBig`)
 

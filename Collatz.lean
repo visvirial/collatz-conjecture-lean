@@ -8,3 +8,4 @@ import Collatz.Cycle
 import Collatz.Kernel
 import Collatz.CycleBound
 import Collatz.Terras
+import Collatz.Korec
