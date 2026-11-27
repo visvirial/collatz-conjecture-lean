@@ -3,6 +3,9 @@ name: CollatzBig (full re-verification)
 # Recompiles every CollatzBig chunk from source with `lean -o` (the kernel re-checks every
 # `decide +kernel` proof), then assembles All, Bridge, CoeffStop, Ext, Circuit, MCycle and runs
 # their axiom audits. About 90 CPU-hours, so it runs on demand and when the verification changes.
+# Compiled chunks are cached per shard, keyed by the hash of the toolchain, the definitions and the
+# shard's chunk sources; the cache is written only by this workflow, so a rerun with unchanged chunks
+# only repeats the assembly and the audits.
 
 on:
   workflow_dispatch:
@@ -15,6 +18,7 @@ on:
       - "Collatz/CoeffStopDefs.lean"
       - "scripts/assemble_*.sh"
       - ".github/workflows/big.yml"
+      - "!**/*.md"
 
 env:
   SHARDS: 200
@@ -50,17 +54,35 @@ jobs:
           for m in Defs ExtDefs CoeffStopDefs; do
             lean -DautoImplicit=false -o build/Collatz/$m.olean Collatz/$m.lean
           done
-      - name: Compile chunks of this shard
+      - name: Select the chunks of this shard
+        id: key
         run: |
-          export LEAN_PATH=$PWD/build
           ls CollatzBig | grep -E '^(Res|Cyc|Cst|Ext[0-9]|ExtCyc)[0-9A-Za-z]*\.lean$' | sort \
             | awk -v n="$SHARDS" -v s="${{ matrix.shard }}" 'NR % n == s' > mine.txt
           echo "$(wc -l < mine.txt) chunks"
+          h=$(cat lean-toolchain Collatz/Defs.lean Collatz/ExtDefs.lean Collatz/CoeffStopDefs.lean \
+            $(sed 's|^|CollatzBig/|' mine.txt) | sha256sum | cut -c1-40)
+          echo "key=chunks-v1-$SHARDS-${{ matrix.shard }}-$h" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: build/CollatzBig
+          key: ${{ steps.key.outputs.key }}
+      - name: Compile chunks of this shard
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          export LEAN_PATH=$PWD/build
           xargs -P 3 -I{} sh -c '
             b=$(basename {} .lean)
             /usr/bin/time -f "$b %e s %M KB" lean -o build/CollatzBig/$b.olean CollatzBig/{}
           ' < mine.txt
-          for f in $(cat mine.txt); do test -s build/CollatzBig/${f%.lean}.olean; done
+      - uses: actions/cache/save@v4
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          path: build/CollatzBig
+          key: ${{ steps.key.outputs.key }}
+      - name: Check this shard's oleans
+        run: for f in $(cat mine.txt); do test -s build/CollatzBig/${f%.lean}.olean; done
       - uses: actions/upload-artifact@v4
         with:
           name: chunks-${{ matrix.shard }}

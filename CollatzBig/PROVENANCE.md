@@ -20,8 +20,9 @@ from scratch with `lean -o`, from `git archive` of commit
   `adaab1617bd8384f15b92c3d2bd48573dbb5a38f6daed6176b3f12ca09fc9731`.
 - The chunk sources and `Collatz/Defs.lean` are byte-identical in commit
   `49a126ab5a981aafcabc961c4ea6deca50a3b575` (checked with `cmp`). On top of the rebuilt chunks,
-  that commit was assembled with `scripts/assemble_big.sh` (`lake build Collatz`, then `lean -o`
-  for `Cst0`-`Cst3`, `All`, `Bridge`, `CoeffStop`, `Audit`); `CollatzBig/Audit.lean` passed, i.e.
+  that commit was assembled (`lake build Collatz`, then `lean -o` for `Cst0`-`Cst3`, which the
+  current `scripts/assemble_big.sh` expects to be compiled beforehand, and for `All`, `Bridge`,
+  `CoeffStop`, `Audit`); `CollatzBig/Audit.lean` passed, i.e.
   `descends_below`, `cycle_length_ge`, `kstepT_period_ge`, `natCast_periodic_ge`,
   `stops_at_coeff_stop` and `stopsBy_iff_goodSet` depend only on `propext`, `Classical.choice`
   and `Quot.sound`.
@@ -86,7 +87,24 @@ limits every numeral to 2^30 bits (128 MB), which is why the Farey pair stops at
 
 ## Bounded m-cycle theorems (2026-11-27)
 
-`CollatzBig/MCycleCert.lean` (seven Farey-pair certificates, largest numeral about 2.7·10^8 bits;
+`CollatzBig/MCycleCert.lean` (seven certificate theorems for five Farey pairs, largest numeral about 2.7·10^8 bits;
 5 s, 0.8 GB), `CollatzBig/MCycle.lean` and `CollatzBig/MCycleAudit.lean` were compiled in the same
 tree by `scripts/assemble_ext.sh`, together with the other assemblies, for the current sources;
 all audits passed.
+
+## Re-verification on GitHub Actions (2026-11-27)
+
+Run [45964407639](https://github.com/visvirial/collatz-conjecture-lean/actions/runs/45964407639)
+of `.github/workflows/big.yml` at commit `c06e8996c905f5cc1f8959f9035b943ae25f098f` recompiled
+every chunk module from source on GitHub-hosted runners, with nothing prebuilt:
+
+- 200 jobs (`ubuntu-latest`, 3 chunks in parallel per job) compiled all 10267 chunks
+  (`Res*`, `Cyc*`, `Cst*`, `Ext*`, `ExtCyc*`) with `lean -o`, i.e. the kernel re-checked every
+  `decide +kernel` proof; 9.4–13.8 min per job, 36.2 runner-hours in total, 2 h 1 min wall clock.
+- The assembly job built the library (`lake build Collatz`), checked that all 10267 chunk oleans
+  were present, and ran `scripts/assemble_big.sh` and `scripts/assemble_ext.sh`: `All` (17.7 s,
+  8.0 GB), `Bridge`, `CoeffStop`, `Ext` (14.6 s, 7.9 GB), `CircuitCert` (35.2 s, 1.4 GB),
+  `Circuit`, `MCycleCert`, `MCycle`; `Audit`, `ExtAudit`, `CircuitAudit` and `MCycleAudit` passed.
+
+Later runs reuse the compiled chunks of a shard from the Actions cache while the toolchain, the
+definitions and the shard's chunk sources are unchanged, and repeat only the assembly and audits.
