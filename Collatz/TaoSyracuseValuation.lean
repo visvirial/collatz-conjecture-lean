@@ -11,7 +11,7 @@ Let `syracuse n = oddPart (3n + 1)` (see `Collatz/Krasikov.lean`) and
 `n` is `syrVec k n = (syrVal n, syrVal (Syr n), …, syrVal (Syr^{k-1} n))`.
 For `a : Fin k → ℕ` put `|a| = ∑ aᵢ` (`vsum a`) and
 `off a = ∑_{i<k} 3^(k-1-i) 2^(a₀ + ⋯ + a_{i-1})` (`off a`), so `off a / 2^|a|` is Tao's
-`F_k(a)` (up to reversing the order of the entries).
+`F_k(a) = ∑_j 3^(k-j) 2^(-a_{[j,k]})` (Tao §6).
 
 Main results:
 
@@ -27,7 +27,7 @@ Remarks on the statements.
 * `affine` and `uniqueness` are stated for every `n : ℕ`, not only odd `n`: the identity
   `3n + 1 = 2^syrVal n * syracuse n` holds for all `n`, so the oddness hypothesis on `n` is not
   needed (the statements are thus slightly stronger than in the paper).
-* `Syrac k : PMF (ZMod (3^k))` is defined as in Tao (1.21), as the law of
+* `Syrac k : PMF (ZMod (3^k))` is Tao's `Syrac(ℤ/3^k)` (1.21), defined here as the law of
   `∑_{i<k} 3^(k-1-i) 2^(-(a_i + ⋯ + a_{k-1})) mod 3^k` for i.i.d. `a_i ~ Geom(2)` (built from
   Mathlib's `PMF.bind`/`PMF.map`). We prove the compatibility (1.22) (`Syrac_compat`) and the
   recursive description `Syrac_{k+1} = (3 Syrac_k + 1) 2^(-Geom(2))` (`Syrac_succ`; this is the
@@ -235,7 +235,7 @@ theorem off_inj : ∀ (k : ℕ) (a b : Fin k → ℕ), (∀ i, 1 ≤ a i) → (�
     obtain ⟨rfl, h2⟩ := key
     rw [off_inj k a' b' ha' hb' (by omega) h2]
 
-/-- **Tao Lemma 6.2.** The map `a ↦ off a / 2^|a|` (Tao's `F_k`, with the entries reversed) is
+/-- **Tao Lemma 6.2.** The map `a ↦ off a / 2^|a|` (Tao's `F_k`) is
 injective on the vectors `a : Fin k → ℕ` with all entries `≥ 1`. -/
 theorem off_div_injOn (k : ℕ) :
     Set.InjOn (fun a : Fin k → ℕ => (off a : ℚ) / 2 ^ vsum a) {a | ∀ i, 1 ≤ a i} := by
@@ -427,7 +427,9 @@ noncomputable def syrSum (N : ℕ) {k : ℕ} (a : Fin k → ℕ) : ZMod N :=
   ∑ i : Fin k, 3 ^ (k - 1 - i) * (2⁻¹ : ZMod N) ^ (vsum a - psum a i)
 
 /-- **Tao (1.21).** `Syrac(ℤ/3^k)`: the law of `∑_{i<k} 3^(k-1-i) 2^(-(a_i + ⋯ + a_{k-1}))`
-mod `3^k` for independent `a_i ~ Geom(2)`. -/
+mod `3^k` for independent `a_i ~ Geom(2)`. Tao writes the sum with prefix sums
+`∑_m 3^(m-1) 2^(-a_{[1,m]})`; reversing the i.i.d. vector `a` turns one form into the other, so the
+two laws coincide. -/
 noncomputable def Syrac (k : ℕ) : PMF (ZMod (3 ^ k)) := (geomVec k).map (syrSum (3 ^ k))
 
 lemma two_mul_inv_two {N : ℕ} (h : Nat.Coprime 2 N) : (2 : ZMod N) * 2⁻¹ = 1 := by
