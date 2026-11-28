@@ -36,8 +36,8 @@
 //   closing entry (min max deficit, ties: largest index, as al_vec's ext); pass C writes the
 //   children of the open j in al_vec's list order (block scan over the entries in reverse order).
 //   Entries are {x (u64), mask (u64)}: the deficit list dl of al_vec is rebuilt from the mask
-//   (dl[v] = P (pos_v + 1) - Q v), k = 64 - clz(mask), d = P k - Q w. x < 3 * 2^k and the child
-//   exponent is <= D <= 60, so every y used to make a child is < 9 * 2^59 and 2y - 1 fits in u64.
+//   (dl[v] = P (pos_v + 1) - Q v), k = 64 - clz(mask), d = P k - Q w. x is kept mod 3^K3 (see
+//   al_gpu.h): all decisions read x mod 9 only, so D <= 64 (the mask width) works with u64 entries.
 //   The host (al_gpu_host.c) turns the summaries into exactly al_vec's tree() decisions; tasks
 //   with a failure (an empty or too deep open class) are rerun by al_vec's own tree() on the CPU;
 //   tasks that do not fit the GPU resources even after the retries go to the CPU reference.
@@ -51,6 +51,7 @@
 __constant__ int cP, cQ, cLmax, cSplit, cMmax;
 __constant__ int cDmax[64];
 __constant__ u64 cP3[41];
+__constant__ u64 cM3, cP2M[DMAXG + 8]; // 3^K3 and 2^k mod 3^K3
 __constant__ int cI0[9] = {0, 1, 0, 0, 1, 2, 0, 3, 0};
 
 enum { CS_NONE = 0, CS_OPEN = 1, CS_CLOSED = 2 };
@@ -212,13 +213,14 @@ __device__ void expand(Sh &sh, int d, u64 *X, u64 *M, u64 E, Summ *pool, u64 cap
       for (int j = 0; j < 3; j++) {
         if (!c[j]) continue;
         unsigned pos = co[j] + carry[j] + (unsigned)((pre >> (21 * j)) & M21);
-        u64 y = (x + ((u64)(3 * j) << k)) << i0s[j];
+        // y = (x + 3 j 2^k) 2^i0 mod 3^K3 (x < 3^K3, 16 * 3^K3 < 2^64)
+        u64 y = ((x + (u64)(3 * j) * cP2M[k]) % cM3 << i0s[j]) % cM3;
         int kk = k + i0s[j], g = gs[j];
         for (int q = 0; q < c[j]; q++) {
-          if (kk > 59) atomicOr(&sh.flags, (unsigned)TF_OVF); // unreachable: the host asserts D <= 60
-          u64 xc = (2 * y - 1) * 0xAAAAAAAAAAAAAAABULL;
+          if (kk > DMAXG - 1) atomicOr(&sh.flags, (unsigned)TF_OVF); // unreachable: the host asserts D <= DMAXG
+          u64 xc = (2 * y - 1) / 3; // y = 2 mod 3: exact; the child x mod 3^(K3 - 1)
           X[pos + q] = xc; M[pos + q] = mk | (1ULL << kk);
-          y <<= g; kk += g; g = 6 - g;
+          y = (y << g) % cM3; kk += g; g = 6 - g;
         }
       }
     }
@@ -344,6 +346,7 @@ extern "C" int gpu_init(const GParams *g, u64 arenaTotal, u64 perBlock, int bloc
   CR(cudaMemcpyToSymbol(cLmax, &g->Lmax, sizeof(int))); CR(cudaMemcpyToSymbol(cSplit, &g->split, sizeof(int)));
   CR(cudaMemcpyToSymbol(cMmax, &g->mmax, sizeof(int)));
   CR(cudaMemcpyToSymbol(cDmax, g->dmax, sizeof(int) * 64)); CR(cudaMemcpyToSymbol(cP3, g->P3, sizeof(u64) * 41));
+  CR(cudaMemcpyToSymbol(cM3, &g->M3, sizeof(u64))); CR(cudaMemcpyToSymbol(cP2M, g->P2M, sizeof(u64) * (DMAXG + 8)));
   gPoolCap = poolCap;
   CR(cudaMalloc(&dPool, sizeof(Summ) * poolCap));
   CR(cudaMalloc(&dPoolCnt, 8)); CR(cudaMalloc(&dJob, 4));
