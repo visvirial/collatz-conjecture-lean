@@ -124,6 +124,11 @@ example {n : ℕ} (hn : 1 ≤ n) : ReachesOne n ↔ ∃ z : ℤ, (3 : ℤ_[2]) *
 
 end Collatz.TwoAdic
 
+-- K. M. Monks 2006: the conjecture on one arithmetic progression suffices
+example (a d : ℕ) (hd : 1 ≤ d) :
+    Conjecture ↔ ∀ n, 1 ≤ a + d * n → ReachesOne (a + d * n) :=
+  MonksAP.conjecture_iff_arith_prog a d hd
+
 open Collatz
 
 /-! Sanity checks on the definitions. -/
