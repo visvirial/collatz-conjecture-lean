@@ -13,13 +13,16 @@ nontrivial circuit with fewer than `6 586 818 670` odd steps) and of Simons–de
 distribution of stopping times and Lagarias' exponential tail bound, and Terras' coefficient
 stopping time conjecture up to level `301 993`; (iv) lower bounds for the number of integers
 reaching 1 (Crandall; Krasikov's method, exponent `0.4848`) and for the length of convergent trajectories
-(Applegate–Lagarias' method, constant `5.789`); and (v) the 2-adic theory of the map: Lagarias' conjugacy as an
+(one-step potentials, constant `5.789`; the Applegate–Lagarias tree search re-run in the kernel
+with ratio `28/59`, constant `5.82`); (v) the 2-adic theory of the map: Lagarias' conjugacy as an
 isometric bijection of `ℤ₂`, periodic points, Haar measure preservation, exactness, strong mixing,
-the Bernoulli isomorphism, the strong law, the central limit theorem, equidistribution, and
-Lagarias' 2-adic form of the conjecture (`3Q(n) ∈ ℤ`). The conjecture itself is not proved. All
-8858 constants of the `Collatz` library (including auxiliary and generated ones) and all `CollatzBig` headline
-theorems use only the axioms `propext`, `Classical.choice` and `Quot.sound`;
-there is no `sorry` and no `native_decide`.
+the Bernoulli isomorphism, the strong law, the central limit theorem, equidistribution,
+Lagarias' 2-adic form of the conjecture (`3Q(n) ∈ ℤ`), Bernstein's explicit formula for `Q⁻¹`
+and the Monks–Yazinski autoconjugacy `Ω`; and (vi) parts of two recent papers (Rozier–Terracol on
+paradoxical sequences, the elementary layer of Tao's Syracuse valuation analysis). The conjecture
+itself is not proved. All constants of the `Collatz` library (including auxiliary and generated
+ones), all `CollatzBig` headline theorems and the generated `long_stopping_AL_28_59` use only the
+axioms `propext`, `Classical.choice` and `Quot.sound`; there is no `sorry` and no `native_decide`.
 
 ## 1. Introduction
 
@@ -51,10 +54,11 @@ Its distinctive features are:
 
 ### Provenance of this work
 
-The library was written in one day (2026-11-27) by an AI assistant (Claude) working with the
-repository owner, with distributed computation on the owner's machines. All statements were
-checked by the Lean kernel, and the repository was reviewed by independent automated passes
-(statement audit, adversarial checks of claims). Section 9 lists what is not covered.
+The library was written over two days (2026-11-27 and 2026-11-28, JST) by an AI assistant (Claude)
+working with the repository owner, with distributed computation on the owner's machines and on
+GitHub Actions. All statements were checked by the Lean kernel, and the repository was reviewed by
+independent automated passes (statement audit, adversarial checks of claims). Section 11 lists what
+is not covered.
 
 ## 2. Setting and conventions
 
@@ -208,8 +212,117 @@ even steps, so `p ≥ 301 994` (`CollatzBig.Ext.kstepT_period_ge`).
   `8/17`, 16.7M for `9/19`, 351M for `14/29`); the one-step potential mod `3^J` reaches about
   `0.4773` at `J = 16`, so `γ ≈ 6` would need `J ≈ 18`. The published
   constant is 6.14316, with a certificate of about 350 million codewords (trees of depth ≤ 60).
+  Section 7 replaces the stored potential by Applegate and Lagarias' own search, re-run in the
+  kernel, which gives `γ ≈ 5.82`.
 
-## 7. The 2-adic map
+## 7. The Applegate–Lagarias search in the kernel
+
+### 7.1 Statements
+
+Applegate and Lagarias [2003] cover the `3`-adic units by a ternary prefix code of residue
+classes, each with a backward path of ratio `≥ P/Q` (odd steps per step). Instead of storing such
+a certificate, `Collatz/LSA/Basic.lean` (no Mathlib) defines a Boolean checker that re-runs the
+search for one class in the kernel: `chunk P Q F r0 js Ts` treats the class with `3`-adic digits
+`r0 :: js` (`r0 ∈ {1, 2}`), keeps a frontier of backward-tree nodes, and closes a child class as
+soon as one odd child reaches ratio `P/Q`; `Ts` are per-level bands (entries with a larger deficit
+are dropped) and `F` is the chain fuel. `Collatz/LongStopAL.lean` proves it sound:
+
+```lean
+def Covered (P Q r M : ℕ) : Prop :=
+  ∀ a, a % M = r → ∃ n k, 0 < k ∧ kstepT^[k] n = a ∧ n % 3 ≠ 0 ∧ P * k ≤ Q * oddCount k n
+
+theorem chunk_sound' {P Q F r0 : ℕ} {js Ts : List ℕ} (hr0 : r0 = 1 ∨ r0 = 2)
+    (hjs : js.all (fun j => Nat.blt j 3) = true) (h : chunk P Q F r0 js Ts = true) :
+    Covered P Q (cls r0 3 js).1 (cls r0 3 js).2
+lemma covered_split {P Q r M : ℕ} (h0 : Covered P Q r (3 * M)) (h1 : Covered P Q (r + M) (3 * M))
+    (h2 : Covered P Q (r + 2 * M) (3 * M)) : Covered P Q r M
+theorem units_of_covered {P Q : ℕ} (h1 : Covered P Q 1 3) (h2 : Covered P Q 2 3) :
+    ∀ a, a % 3 ≠ 0 → ∃ n k, 0 < k ∧ kstepT^[k] n = a ∧ n % 3 ≠ 0 ∧ P * k ≤ Q * oddCount k n
+theorem long_stopping_AL {P Q : ℕ}
+    (hc : ∀ a, a % 3 ≠ 0 → ∃ n k, 0 < k ∧ kstepT^[k] n = a ∧ n % 3 ≠ 0 ∧ P * k ≤ Q * oddCount k n)
+    (N : ℕ) : ∃ n L, N ≤ L ∧ 1 ≤ n ∧ kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+      Q * Real.log n - 2 * P * Real.log 3 ≤ (Q * Real.log 2 - P * Real.log 3) * (L + 2 : ℕ)
+```
+
+`cls r0 3 js` is the class reached from `r0 mod 3` along the digits `js`. The bands and the fuel
+only steer the search: `chunk_sound` holds for all hints, so a wrong hint makes a `decide +kernel`
+fail, never succeed. `long_stopping_AL` gives infinitely many `n` with total stopping time
+`σ(n) ≥ γ log n - c`, `γ = 1/(log 2 - (P/Q) log 3)`. A small instance is in the library
+(`long_stopping_AL_25`, ratio `2/5`, two chunks, `γ ≈ 3.94`). For `P/Q = 28/59` the generated
+module `Final.lean` (outside the Lake build, see 7.2) proves
+
+```lean
+theorem Collatz.LSA.long_stopping_AL_28_59 (N : ℕ) : ∃ n L, N ≤ L ∧ 1 ≤ n ∧
+    kstepT^[L + 2] n = 1 ∧ (∀ i < L + 2, kstepT^[i] n ≠ 1) ∧
+    (59 : ℕ) * Real.log n - 2 * (28 : ℕ) * Real.log 3 ≤
+      ((59 : ℕ) * Real.log 2 - (28 : ℕ) * Real.log 3) * (L + 2 : ℕ)
+```
+
+with `γ = 1/(log 2 - (28/59) log 3) ≈ 5.8217`, by `long_stopping_AL (units_of_covered c_1_1 c_1_2)`,
+followed by a `#guard_msgs` audit showing only `propext`, `Classical.choice` and `Quot.sound`.
+
+### 7.2 Pipeline
+
+1. **Search.** `scripts/al_vec.c` in `TREE` mode
+   (`TREE="W0 mmax" [OFFSET=o] ./al_vec P Q D split Lmax Tbig sample`) runs the search outside
+   the kernel. The non-closed classes at level `split` are the parallel tasks (every `sample`-th
+   from `OFFSET`). For each class, stage 1 is a full search with band `Tbig` that records the
+   deficits of the chosen closing paths (the hints), and stage 2 mirrors the kernel check with these
+   hints and counts its steps; a class whose stage-2 work exceeds `W0` is split into its three
+   children, down to level `mmax`. The output is the prefix tree: `S r m` for a split class and
+   `L r m ok work T_1,…` for a leaf, followed by a `# done` line with the totals and the number of
+   failures.
+2. **Generation.** `scripts/gen_al.py TREE P Q OUT TAG [BUDGET] [FANIN]` checks that the tree is a
+   complete ternary prefix tree over `1, 2 mod 3` with no failed leaf and writes, deterministically,
+   Mathlib-free chunk modules `K<i>` (one `decide +kernel` theorem per leaf, consecutive subtrees
+   packed up to `BUDGET` estimated kernel steps per module, default `2·10^6`), assembly modules
+   `A<i>` (leaves converted by `chunk_sound'`, inner nodes combined by `covered_split`, at most
+   `FANIN` imports per module, 1000 in the workflow), `Final.lean`, and `modules.txt` with the
+   estimated work of every module.
+3. **Sharded check.** `.github/workflows/al.yml` (inputs `p q shards first count assemble runs
+   budget`) regenerates the modules from the committed tree `data/al/tree-P-Q.txt.xz` and checks
+   the `K` modules on parallel runners with `scripts/al_build.sh` (`lean -o`, four processes per
+   runner). Modules are assigned to shards by a deterministic longest-processing-time rule on the
+   estimated steps plus `10^6` per module. A run checks shards `first … first+count-1` of a fixed
+   partition (at most 256 jobs per run), so a large check is split over several runs; the shard
+   oleans are kept as artifacts for 30 days.
+4. **Assembly.** The last run (`assemble` on, `runs` = the ids of the earlier runs) builds the
+   library up to `Collatz.LongStopAL`, downloads the shard oleans, compiles the `A` modules and
+   `Final` in dependency order and runs the axiom audit.
+
+The measured rate on GitHub-hosted runners is about `1.9·10^8` kernel steps per runner-hour.
+
+### 7.3 Results
+
+| ratio | `γ` | leaves | chunk modules | kernel steps | GitHub runs |
+| --- | --- | --- | --- | --- | --- |
+| `4/9` | 4.88 | 188 | 3 | `4.6·10^6` | 46017604665; split-run test 46027927934 + 46028063910 |
+| `28/59` | 5.82 | 132 636 | 2903 | `4.28·10^9` | 46032421992 + 46032440828 (chunks), 46043134239 (assembly) |
+
+The 28/59 check took 101 jobs and 22.8 runner-hours. The commands, hashes and run details are
+in `data/al/PROVENANCE.md`. A tree for the paper's ratio `14/29` (`γ ≈ 6.14316`) is committed
+there as well; its check had not finished when this was written, and the result is not claimed.
+
+### 7.4 GPU search
+
+The stage 1 of `al_vec` is repeated at every split depth: a class and each of its descendants are
+searched again from their own frontiers. `scripts/al_gpu.cu` with `scripts/al_gpu_host.c` (which
+includes `al_vec.c` verbatim; build with `scripts/al_gpu.mk`) takes the same arguments and
+environment and prints the same lines. It searches the subtree of each task once, one CUDA block
+per task, and derives from this single depth-first search the hints and the stage-1 work of every
+class in the subtree; the host replays `al_vec`'s `tree()` decisions on these summaries. Stage 2
+and the leaf output are `al_vec`'s own code, and tasks that fail or exceed the GPU resources are
+rerun on the CPU (by `al_vec`'s `tree()` or by the CPU reference; `-DNOGPU` builds the same
+algorithm without CUDA as `al_s1ref`). Soundness does not depend on this program, since every
+leaf is checked again by the kernel.
+
+The output (sorted lines and the `# done` line, apart from `time=`) was byte-identical to
+`al_vec`'s on `4/9` and `28/59` (full and sampled) and on `14/29` samples. The full `28/59` tree took
+about 105 s on an RTX 3080 with 4 CPU threads, against 7610 s for `al_vec` on 28 threads. Most of
+the gain is algorithmic (one search per subtree instead of one per split depth); the GPU itself
+contributes a factor of 1.1–11 over the CPU-only build of the same algorithm.
+
+## 8. The 2-adic map
 
 `T` extends to `ℤ₂` by `T x = (x + par x (2x+1))/2`, and `Q x = ∑ par(T^i x) 2^i` reads the
 parity sequence as a 2-adic integer.
@@ -233,11 +346,92 @@ parity sequence as a 2-adic integer.
   The strong law and the CLT are immediate from the Bernoulli property; we know no specific source.
 - **The 2-adic form of the conjecture.** Since `3 Q 1 = -1`, `ReachesOne n ↔ 3 Q(n) ∈ ℤ` for
   `n ≥ 1`, so the conjecture is equivalent to `3 Q(n) ∈ ℤ` for every positive integer
-  (`conjecture_iff_three_mul_Q`). This is Lagarias' third form of the conjecture [1985, §2.8];
-  Bernstein [1994] gave an explicit non-iterative formula for `Φ = Q⁻¹` and the equivalent statement
-  `ℤ⁺ ⊆ Φ(⅓ℤ)`, which we do not formalize.
+  (`conjecture_iff_three_mul_Q`). This is Lagarias' third form of the conjecture [1985, §2.8].
+- **Bernstein's formula** (`Collatz/BernsteinFormula.lean`). If `y = 2^(d₀) + 2^(d₁) + ⋯` with
+  `d₀ < d₁ < ⋯`, then `Q⁻¹ y = -∑ᵢ 2^(dᵢ) 3^(-(i+1))` [Bernstein 1994]. In terms of the bits of
+  `y` (`1/3` is the 2-adic unit `Ring.inverse 3`):
 
-## 8. Engineering notes
+  ```lean
+  theorem TwoAdic.bernstein_formula (y : ℤ_[2]) :
+      Qequiv.symm y = -∑' i, bv (bits y i) * 2 ^ i *
+        Ring.inverse (3 : ℤ_[2]) ^ (1 + ((range i).filter (fun l => bits y l = true)).card)
+  theorem TwoAdic.bernstein_formula_finite {r : ℕ} (d : Fin r → ℕ) (hd : StrictMono d) :
+      (3 : ℤ_[2]) ^ r * Qequiv.symm (∑ i, (2 : ℤ_[2]) ^ d i) =
+        -∑ i : Fin r, (3 : ℤ_[2]) ^ (r - 1 - i) * 2 ^ d i
+  theorem TwoAdic.conjecture_iff_bernstein :
+      Conjecture ↔ ∀ n : ℕ, 1 ≤ n → ∃ m : ℤ, (n : ℤ_[2]) = Qequiv.symm (m * Ring.inverse 3)
+  ```
+
+  The last is Bernstein's form `ℤ⁺ ⊆ Q⁻¹(⅓ℤ)`. The proof shows that the series `B b` of a bit
+  sequence `b` has parity `b₀` and `T (B b) = B (shifted b)`, so `Q (B b)` and the 2-adic integer
+  with bits `b` agree modulo every power of 2.
+- **The autoconjugacy** (`Collatz/AutoconjugacyOmega.lean`, Monks–Yazinski [2004]). With
+  `V y = -1 - y` (complement of the binary digits), `Ω = Q⁻¹ ∘ V ∘ Q` satisfies `T ∘ Ω = Ω ∘ T`
+  (`T_Ω`), is an involution (`Ω_Ω`), an isometry (`Ω_isometry`), preserves Haar measure
+  (`Ω_measurePreserving`) and flips parity (`par_Ω : par (Ω x) = 1 - par x`), so it has no fixed
+  point (`Ω_ne_self`); `Ω 0 = -1` and `Ω 1 = 2`. Call `f : ℤ₂ → ℤ₂` solenoidal if
+  `2^k ∣ x - y → 2^k ∣ f x - f y`. Then
+
+  ```lean
+  theorem TwoAdic.solenoidal_commute_iff (f : ℤ_[2] → ℤ_[2]) :
+      (Solenoidal f ∧ ∀ x, T (f x) = f (T x)) ↔
+        f = id ∨ f = Ω ∨ f = (fun _ => 0) ∨ f = (fun _ => -1)
+  ```
+
+  and the injective solenoidal maps commuting with `T` are exactly `id` and `Ω`
+  (`solenoidal_injective_autoconjugacy`, `solenoidal_bijective_autoconjugacy`). The proof conjugates
+  by `Q` and classifies the solenoidal maps commuting with the shift: each acts on every binary
+  digit by the same map `Bool → Bool`.
+
+## 9. Results from recent papers
+
+### 9.1 Paradoxical sequences (Rozier–Terracol)
+
+`Collatz/RozierTerracolParadox.lean` follows Rozier and Terracol [2025]. With `q = oddCount j n`, a
+pair `(j, n)` is paradoxical if `j ≥ 1`, `n > 2`, `3^q < 2^j` and still `T^j n ≥ n`
+(`RozierTerracol.Paradoxical`). The results, stated over `ℕ` after clearing denominators:
+
+- Theorem 2.4: `3^q n + (3^q - 2^q) ≤ 2^j T^j n ≤ 3^q n + 2^(j-q) (3^q - 2^q)`
+  (`lower_bound`, `upper_bound`).
+- Lemma 2.5: `4 ∑_{r < 2^j} (2^j T^j r - 3^(q(r)) r) = j 4^j` (`sum_two_pow_mul_iterate_sub`).
+- Lemma 3.1: for `N ≥ 1` and every `A` there are `a ≥ A` and `b` with `3^a < 2^b` and
+  `(4N - 1) 2^b < 4N 3^a` (`exists_pow_window`), from the irrationality of `log 3 / log 2` and
+  Dirichlet approximation.
+- Theorem 3.2: if `n ≥ 2` and `T^j n ≥ n` for all `j`, there are paradoxical pairs `(j, 2^k n)` with
+  arbitrarily large `oddCount` (`infinite_paradoxical_of_no_descent`), hence infinitely many
+  (`paradoxical_infinite_of_no_descent`).
+- Corollary 3.3:
+
+  ```lean
+  theorem RozierTerracol.conjecture_of_finite_paradoxical
+      (h : {p : ℕ × ℕ | Paradoxical p.1 p.2}.Finite) : Conjecture
+  ```
+
+The paper's enumeration of the known paradoxical sequences is not included.
+
+### 9.2 Syracuse valuation vectors (Tao)
+
+`Collatz/TaoSyracuseValuation.lean` formalizes the elementary layer of Tao [2022]. Let
+`syracuse n = oddPart (3n + 1)`, `syrVal n = ν₂(3n + 1)`, and let `syrVec k n` be the vector
+`(syrVal (Syr^i n))_{i<k}`; for `a : Fin k → ℕ` put `vsum a = ∑ aᵢ` (written `|a|`) and
+`off a = ∑_{i<k} 3^(k-1-i) 2^(a₀ + ⋯ + a_{i-1})`.
+
+- (1.5)/(1.7): `2 ^ vsum (syrVec k n) * syracuse^[k] n = 3 ^ k * n + off (syrVec k n)` for every `n`
+  (`TaoSyracuse.affine`).
+- Lemma 2.1: if all `aᵢ ≥ 1`, `m` is odd and `2^|a| m = 3^k n + off a`, then `a = syrVec k n` and
+  `m = Syr^k n` (`uniqueness`); vectors with entries `≥ 1` are determined by `|a|` and `off a`
+  (`off_inj`).
+- Lemma 6.2: `a ↦ off a / 2^|a|` is injective on vectors with entries `≥ 1` (`off_div_injOn`).
+- An exact case of Proposition 1.9: for `M ≥ |a| + 1` exactly `2^(M - |a| - 1)` odd `n < 2^M` have
+  `syrVec k n = a` (`card_syrVec_eq`); as a proportion of the odd `n < 2^M` this is `1/2^|a|`, the
+  law of `k` independent `Geom(2)` variables (`prob_syrVec_eq`).
+- `Syrac k : PMF (ZMod (3^k))`, Tao's `Syrac(ℤ/3^k)` (1.21), built from Mathlib's `PMF`, with the
+  compatibility (1.22) (`Syrac_compat`) and the recursion
+  `Syrac (k+1) = (3 Syrac k + 1) 2^(-Geom(2))` (`Syrac_succ`).
+
+The main theorem of the paper (almost all orbits attain almost bounded values) is not formalized.
+
+## 10. Engineering notes
 
 - **`decide +kernel` at scale.** The kernel evaluates `Nat` literals with GMP, so `Nat.rec` loops
   over hundreds of thousands of steps are feasible; memory grows with the work in one declaration.
@@ -251,20 +445,24 @@ parity sequence as a 2-adic integer.
   (core `instPowNat` against Mathlib's `Monoid.npow`) make the kernel attempt the full power, so
   certificates are stated with the power function abstracted.
 - **Build tooling.** Modules compiled with `lean -o` have no Lake traces, so `lake build` would
-  recompile them; the large verification is therefore outside the Lake graph and assembled by
-  scripts. Lake's local artifact cache and remote `lake cache` exist but were not needed.
+  recompile them; the large verification and the generated Applegate–Lagarias modules are therefore
+  outside the Lake graph and assembled by scripts. Lake's local artifact cache and remote `lake cache` exist but were not needed.
 
-## 9. Limitations and outlook
+## 11. Limitations and outlook
 
 - Nothing here proves the conjecture or excludes all cycles. The cycle results are bounded; the
   unbounded versions in the literature use Baker's theorem, which is not in Mathlib.
 - The verified range (`7.3·10^9`) is far below published computations; it was chosen as the point
   where the cycle method saturates.
-- Not formalized: Tao's theorem that almost all orbits attain almost bounded values, the
-  Krasikov–Lagarias exponent 0.84, Applegate–Lagarias' constant 6.14 (we reach 5.789), and the full Steiner and
-  Simons–de Weger theorems.
-- Natural extensions are larger certificates for the long-trajectory constant and the
-  Krasikov exponent (both grow slowly with the modulus), and an integrality argument for `m ≥ 2` in 4.3.
+- Not formalized: Tao's theorem that almost all orbits attain almost bounded values (only the
+  elementary layer of 9.2 is), the Krasikov–Lagarias exponent 0.84, Applegate–Lagarias' constant
+  6.14 (we reach 5.789 in the library and 5.82 with the generated 28/59 modules), and the full
+  Steiner and Simons–de Weger theorems.
+- `long_stopping_AL_28_59` is proved in generated modules that are checked on GitHub Actions; they
+  are not part of `lake build` or `lake test`. The evidence is the workflow runs listed in 7.3.
+- Natural extensions are the ratio `14/29` with the same pipeline, a larger certificate for the
+  Krasikov exponent (it grows slowly with the modulus), and an integrality argument for `m ≥ 2` in
+  4.3.
 
 ## References
 
@@ -285,6 +483,9 @@ parity sequence as a 2-adic integer.
 - J. C. Lagarias, *The 3x+1 problem and its generalizations*, Amer. Math. Monthly 92 (1985), 3–23.
 - K. R. Matthews, A. M. Watts, *A generalization of Hasse's generalization of the Syracuse
   algorithm*, Acta Arith. 43 (1984), 167–175.
+- K. G. Monks, J. Yazinski, *The autoconjugacy of the 3x+1 function*, Discrete Math. 275 (2004),
+  219–236.
+- O. Rozier, C. Terracol, *Paradoxical behavior in Collatz sequences*, arXiv:2502.00948 (2025).
 - J. Simons, B. de Weger, *Theoretical and computational bounds for m-cycles of the 3n+1 problem*,
   Acta Arith. 117 (2005), 51–70.
 - R. P. Steiner, *A theorem on the Syracuse problem*, Proc. 7th Manitoba Conf. Numer. Math. Comput. (Winnipeg, 1977),
@@ -298,8 +499,9 @@ parity sequence as a 2-adic integer.
 
 | Part | Size |
 | --- | --- |
-| Library `Collatz/` (40 files, plus 245 in `Collatz/LS12/`, `LS15/`, `LSF/`, mostly generated) | 7103 lines (excluding those directories), 8 858 constants (including auxiliary and generated ones) |
-| Tests `CollatzTest/` | 148 lines |
+| Library `Collatz/` (45 files, plus 246 in `Collatz/LS12/`, `LS15/`, `LSF/`, `LSA/`, mostly generated) | 9197 lines (excluding those directories) |
+| Tests `CollatzTest/` | 165 lines |
 | Generated chunks `CollatzBig/` | 10 267 chunk modules (about 2 MB of source), assemblies of 24 077 and 17 124 lines |
+| Generated Applegate–Lagarias modules (from `data/al/`, not committed) | 28/59: 2903 chunk modules, 11 assembly modules, `Final` |
 | Kernel certificates | numerals of up to 630 million bits (circuit), 270 million (m-cycles) |
-| Computation | about 92 hours of compute for the clean rebuild on our machines |
+| Computation | about 92 hours of compute for the clean rebuild on our machines; 22.8 runner-hours on GitHub Actions for 28/59 |
