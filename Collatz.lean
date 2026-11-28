@@ -44,3 +44,4 @@ import Collatz.TaoSyracuseValuation
 import Collatz.BernsteinFormula
 import Collatz.AutoconjugacyOmega
 import Collatz.MonksArithProg
+import Collatz.ApplegateLagariasSemigroup
