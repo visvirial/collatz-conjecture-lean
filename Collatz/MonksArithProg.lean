@@ -5,7 +5,7 @@ import Collatz.Terras
 
 Reference: K. M. Monks, *The sufficiency of arithmetic progressions for the 3x+1 conjecture*,
 Proc. Amer. Math. Soc. **134** (2006), no. 10, 2861–2872 (MR2231609). The proof below follows
-the sketch in K. G. Monks, K. G. Monks, K. M. Monks, M. Monks, *Strongly sufficient sets and the
+the sketch in Keenan Monks, K. G. Monks, K. M. Monks, M. Monks, *Strongly sufficient sets and the
 distribution of arithmetic sequences in the 3x+1 graph*, arXiv:1204.3904, Sec. 3 (eq. (3.1))
 and Sec. 4 (Lemma 4.3, Theorem 4.1).
 
