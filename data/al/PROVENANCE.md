@@ -34,6 +34,7 @@ The argument order is `P Q D split Lmax Tbig sample`; `TREE="W0 mmax"` selects t
 | `tree-4-9.txt.xz` | `192ecc253bba7d0f269e31c38d7cf723837ce95d68a170475599219145731baf` | `f33c17a` |
 | `tree-28-59.txt.xz` | `af45f82d557912785638f96dff64731026e33566e89b985ebd7bbd1ae98267d3` | `45e2565` |
 | `tree-14-29.txt.xz` | `84cf642ddeda754cf4a2d29c52a858114f158cc548d898e992d776a18c18ea78` | `b336bab` |
+| `tree-15-31.txt.xz` | `0d769fd34f6b0d9d7f05063d69164b737ea26b3fc75dbadebc6a71ce7465a981` | this commit |
 
 ## Ratio 4/9 (`γ = 1/(log 2 - (4/9) log 3) ≈ 4.881`)
 
@@ -136,3 +137,33 @@ GitHub Actions (`shards = 330`, commit `b336bab`):
 
 At the measured rate of about `1.9·10^8` kernel steps per runner-hour, the chunk check is roughly
 520 runner-hours. Until the assembly run has succeeded, `long_stopping_AL_14_29` is not proved.
+
+## Ratio 15/31 (`γ = 1/(log 2 - (15/31) log 3) ≈ 6.18963`, beyond the value of Applegate and Lagarias)
+
+Header lines:
+
+```
+# TREE P=15 Q=31 D=62 split=12 Lmax=40 Tbig=200 W0=100000 mmax=40 sample=1 offset=0
+# done tasks=49877 stage1=30486116664271 kernel=104514276878 leaves=3204682 overW0=0 fail=0 time=850s
+```
+
+Command (RTX 3080, `scripts/al_gpu` of commit `5f363c7`, which keeps `x mod 3^37` and so allows
+`D <= 64`; the earlier al_gpu needed `D <= 60`):
+
+```sh
+S2CAP=1 TREE="100000 40" ./al_gpu 15 31 62 12 40 200 1 > tree-15-31.txt
+```
+
+The search depth matters: with `D = 60` (the depth of Applegate and Lagarias, maximal weight 29)
+the sample `sample = 2000, offset = 0` has 151 failed classes, all with an empty frontier at weight
+29; `D = 61` leaves 8; `D = 62` (maximal weight 30) none. On that sample `al_vec` (D = 62) and the
+new `al_gpu` print the same lines and `# done` line.
+
+Checks of the file: no class occurs twice, no class is both split and a leaf, every leaf has
+`ok = 1`, the leaf work sums to `kernel=104514276878`; 3 204 682 leaves, 1 602 340 split classes,
+deepest leaf at level 25, hint lists of at most 29 nonzero entries, largest hint 200.
+
+`gen_al.py` (budget `2·10^6`, fan-in 1000): 3 204 682 leaves, 1 602 340 inner nodes,
+104 517 481 560 estimated steps, 70 337 chunk modules, 233 assembly modules. Four chunk modules
+(`K00100`, `K20000`, `K50000`, `K69000`) were checked with `lake env lean` (37-84 s each). The
+whole check has not been run: `long_stopping_AL_15_31` is not proved.

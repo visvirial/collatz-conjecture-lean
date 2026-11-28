@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 static int dmaxv[64];
+static u64 M3g, P2Mg[DMAXG + 8]; // 3^K3 and 2^k mod 3^K3 (see al_gpu.h)
 static int useGPU = 1, checkN = 0, s2cap = 0;
 static FILE *dumpf;
 
@@ -76,11 +77,11 @@ static void refClass(Ref *R, int d, u64 r, const u64 *X, const u64 *M, size_t n,
       }
       wk[j] += c + 2;
       if (!c || key[j] != ~0ULL) continue; // a closed j needs no children
-      u64 y = (x + ((u64)(3 * j) << k)) << i0; int kk = k + i0;
+      u64 y = ((x + (u64)(3 * j) * P2Mg[k]) % M3g << i0) % M3g; int kk = k + i0;
       for (int q = 0; q < c; q++) {
-        if (kk > 59) { R->flags |= TF_OVF; return; }
-        bufPush(&R->b[d][j], (2 * y - 1) * 0xAAAAAAAAAAAAAAABULL, mk | (1ULL << kk));
-        y <<= g; kk += g; g = 6 - g;
+        if (kk > DMAXG - 1) { R->flags |= TF_OVF; return; }
+        bufPush(&R->b[d][j], (2 * y - 1) / 3, mk | (1ULL << kk));
+        y = (y << g) % M3g; kk += g; g = 6 - g;
       }
     }
   }
@@ -133,21 +134,21 @@ static void prepTask(Task *t) {
   t->x = malloc(8 * n); t->mk = malloc(8 * n); t->n = n;
   for (int i = 0; i < n; i++) {
     Ent *e = &f[i];
-    if (e->x >> 64 || e->p == 0 || (e->p & (e->p - 1))) { t->flags |= TF_OVF; break; }
+    if (e->p == 0 || (e->p & (e->p - 1))) { t->flags |= TF_OVF; break; }
     int k = 0; u128 p = e->p; while (p > 1) { p >>= 1; k++; }
-    if (k > 60 || e->x >= 3 * e->p) { t->flags |= TF_OVF; break; }
+    if (k > DMAXG || e->x >= 3 * e->p) { t->flags |= TF_OVF; break; }
     if (e->d != P * k - Q * w) die("entry deficit != P k - Q w");
     u64 mk = 0; int prev = 0, pm = 0;
     for (int v = 1; v <= w; v++) {
       int num = e->dl[v] + Q * v;
       if (num % P) die("dl not of the form P k - Q v");
       int kv = num / P;
-      if (kv <= prev || kv > 60) die("dl exponents not increasing");
+      if (kv <= prev || kv > DMAXG) die("dl exponents not increasing");
       mk |= 1ULL << (kv - 1); prev = kv;
       if (e->dl[v] > pm) pm = e->dl[v];
     }
     if (prev != k || pm != e->pm) die("mask conversion mismatch");
-    t->x[i] = (u64)e->x; t->mk[i] = mk;
+    t->x[i] = (u64)(e->x % M3g); t->mk[i] = mk;
   }
   free(f);
 }
@@ -502,7 +503,10 @@ int main(int argc, char **argv) {
   Ad tot = {0}; double t0 = omp_get_wtime();
   printf("# TREE P=%d Q=%d D=%d split=%d Lmax=%d Tbig=%d W0=%llu mmax=%d sample=%d offset=%d\n",
          P, Q, D, split, Lmax, Tbig, W0, mmax, sample, off);
-  if (D < 1 || D > 60) die("needs 1 <= D <= 60 (u64 entries)");
+  if (D < 1 || D > DMAXG) die("needs 1 <= D <= 64 (the mask width)");
+  if (Lmax - split + 2 > K3) die("needs Lmax - split + 2 <= K3 (x mod 3^K3)");
+  M3g = 1; for (int i = 0; i < K3; i++) M3g *= 3;
+  P2Mg[0] = 1; for (int i = 1; i < DMAXG + 8; i++) P2Mg[i] = 2 * P2Mg[i - 1] % M3g;
   if (Lmax > TVN + 1 || Lmax + 1 >= 64 || Lmax - split + 2 > MAXLV || split < 2) die("needs split >= 2, Lmax <= TVN + 1, Lmax - split + 2 <= MAXLV");
   if (Q <= P || mmax > 40) die("needs Q > P, mmax <= 40");
   useGPU = envi("GPU", 1); checkN = envi("CHECK", 0); s2cap = envi("S2CAP", 0);
@@ -555,6 +559,7 @@ int main(int argc, char **argv) {
     gp.P = P; gp.Q = Q; gp.D = D; gp.Lmax = Lmax; gp.split = split; gp.mmax = mmax;
     for (int w = 0; w < 64; w++) gp.dmax[w] = w <= Lmax ? dmaxv[w] : 0;
     for (int i = 0; i <= 40; i++) gp.P3[i] = P3[i];
+    gp.M3 = M3g; memcpy(gp.P2M, P2Mg, sizeof P2Mg);
     u64 pool = getenv("GPU_REC") ? strtoull(getenv("GPU_REC"), 0, 10) : 8000000ULL;
     u64 arena = getenv("GPU_ARENA") ? strtoull(getenv("GPU_ARENA"), 0, 10) : 0;
     u64 perBlock = getenv("GPU_ARENA_BLOCK") ? strtoull(getenv("GPU_ARENA_BLOCK"), 0, 10) : 600000ULL;
