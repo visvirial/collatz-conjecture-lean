@@ -33,6 +33,7 @@ Notation: `step n = n/2` or `3n+1`; the accelerated map `T n = kstepT n = n/2` o
 | … `≥ 5.82 log n - c` steps, by the Applegate–Lagarias tree search run in the kernel (GitHub Actions) | `Collatz.LSA.long_stopping_AL_28_59` | Applegate–Lagarias 2003 |
 | Finitely many paradoxical sequences would imply the conjecture | `RozierTerracol.conjecture_of_finite_paradoxical` | Rozier–Terracol 2025 (Cor. 3.3) |
 | Syracuse valuation vectors: affine formula, uniqueness, exact geometric law; `Syrac(ℤ/3^k)` and its compatibility | `TaoSyracuse.affine`, `prob_syrVec_eq`, `Syrac_compat` | Tao 2022 (§1, Lemma 6.2) |
+| Conjecture ⟺ conjecture on one arithmetic progression `{a + d n}`; same reduction for divergent orbits and cycles | `MonksAP.conjecture_iff_arith_prog`, `exists_unbounded_of_unbounded`, `exists_reaches_cycle` | K. M. Monks 2006 |
 | Explicit series for `Q⁻¹`; conjecture ⟺ `ℤ⁺ ⊆ Q⁻¹(⅓ℤ)` | `TwoAdic.bernstein_formula`, `conjecture_iff_bernstein` | Bernstein 1994 |
 | The autoconjugacy `Ω`; the solenoidal maps commuting with `T` are exactly `id`, `Ω`, `0`, `-1` | `TwoAdic.T_Ω`, `solenoidal_commute_iff` | Monks–Yazinski 2004 |
 | `T` on `ℤ₂` is conjugate to the shift by an isometric bijection `Q` | `TwoAdic.Qequiv`, `Qequiv_conj` | Lagarias 1985 (Thm L), Bernstein–Lagarias 1996 |
